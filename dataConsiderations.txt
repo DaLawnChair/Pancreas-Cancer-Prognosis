@@ -1,0 +1,18 @@
+Cases to Consider from the pre-treatment:
+
+CASE265: weird missing some segmentation inbetween proper images
+
+CASE272: only 6 images
+
+CASE481: somehow is getting the same output as 480
+
+CASE533: missing the HU truth value in the header (volume could've corrupted, check later)
+
+CASE535: weird missing some segmentation inbetween proper images
+
+CASE560: lists everything but the houseinfield unit metadata: 0028|1054
+
+CASE578: weird missing some segmentation inbetween proper images
+
+CASE629: probably got corrupted, same with mha
+
