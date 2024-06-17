@@ -6,13 +6,18 @@ CASE272: only 6 images
 
 CASE481: somehow is getting the same output as 480
 
-CASE533: missing the HU truth value in the header (volume could've corrupted, check later)
+CASE533: probably got corrupted, same with mha XXXX
 
 CASE535: weird missing some segmentation inbetween proper images
 
-CASE560: lists everything but the houseinfield unit metadata: 0028|1054
+CASE560: lists everything but the houseinfield unit metadata: 0028|1054 XXX
 
 CASE578: weird missing some segmentation inbetween proper images
 
-CASE629: probably got corrupted, same with mha
+CASE629: probably got corrupted, same with mha XXX
 
+
+Cases for the post-treatment:
+
+Some images in post has .mha.mha (546157) [now fixed]
+Some have NM, some have JM (546191-546237, ignoring the no segmentation ones), and some do not have either.
