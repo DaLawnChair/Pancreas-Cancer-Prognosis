@@ -51,5 +51,5 @@ def centerXYOfImage(overlay_mask, segment_mask, segmentedSlices, padding=25):
     segmentedSlices = np.sort(np.array(segmentedSlices))
 
     
-    return overlay_mask[start_x:end_x, start_y:end_y, segmentedSlices[0]:segmentedSlices[len(segmentedSlices)-1]+1]
+    return overlay_mask[start_x:end_x, start_y:end_y, np.array(segmentedSlices)]
 

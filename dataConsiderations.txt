@@ -1,20 +1,20 @@
 Cases to Consider from the pre-treatment:
 
-CASE265: weird missing some segmentation inbetween proper images
+CASE265: weird missing some segmentation inbetween proper images [fixed now]
 
-CASE272: only 6 images
+CASE272: only 3 images
 
-CASE481: somehow is getting the same output as 480
+CASE481: [Removed because it is empty]
 
-CASE533: probably got corrupted, same with mha XXXX
+CASE533: whole segment is corrupted/is completely empty
 
-CASE535: weird missing some segmentation inbetween proper images
+CASE535: weird missing some segmentation inbetween proper images [fixed now]
 
-CASE560: lists everything but the houseinfield unit metadata: 0028|1054 XXX
+CASE560: lists everything but the houseinfield unit metadata: 0028|1054 XXX [But I dont think this matters]
 
-CASE578: weird missing some segmentation inbetween proper images
+CASE578: weird missing some segmentation inbetween proper images [fixed now] 
 
-CASE629: probably got corrupted, same with mha XXX
+CASE629: whole segment is corrupted/is completely empty
 
 
 Cases for the post-treatment:
@@ -26,9 +26,13 @@ CASE472: looks completely white
 
 CASE480: has last 2 images as just dots
 
-CASE523: image is converted into a completely black pictures [Completely wrong]
+CASE523: image is converted into a completely black pictures [due to the resampling not being done right]
 
-CASE533: image is converted into a completely black pictures [Completely wrong]
+CASE533: image is converted into a completely black pictures [due to the resampling not being done right]
 
 CASE546: there is only 1 image in the segmentSlices array, make sure that it turned into a 3D array [It might just be 1 frame, also from the slicer it doesn't line up with the 
 whole image at all, view slicer to confirm, but that might just be from the space origin that is fixed when we run it here] 
+
+[]Yet to do other cases[]
+
+
