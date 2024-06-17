@@ -1,5 +1,12 @@
-This current iteration is able to read the segmentations and whole images from he PDAC-Response Pre-treatment directory, subtract the segmented tumor from the whole, and is able to do it for cases that I do not ignore in imageSegmentationMultiple.ipynb.
+Current progress:
+* Converted numpy array methods into simplier sitk uses, refractoring code and speeding up times
+* Added in conversion when 2 images are not aligned
+* Adding in functionality for post segment and whole images
 
-Current To Do's:
--Link the whole and pre-treatment segmentation to the post segmentation as well
--Be able to ignore faulty cases as listed in dataConsiderations.txt
+Need to do:
+* Fix cases with post and whole not lining up, specifically when the z size of the whole segment is less than the post segments'
+* Accept a 1D array for the case of CASE546
+* View and fix case ids above CASE546
+* Segment both post and pre with the whole image
+* Combined these images into 1 numpy array
+* Apply image transformations on these images
