@@ -26,9 +26,9 @@ CASE472: looks completely white
 
 CASE480: has last 2 images as just dots
 
-CASE523: image is converted into a completely black pictures [due to the resampling not being done right]
+CASE523: image is converted into a completely black pictures [slice mismatch between segment and whole, giving nothing when overlaying]
 
-CASE533: image is converted into a completely black pictures [due to the resampling not being done right]
+CASE533: image is converted into a completely black pictures [slice mismatch between segment and whole, giving nothing when overlaying]
 
 CASE546: there is only 1 image in the segmentSlices array, make sure that it turned into a 3D array [It might just be 1 frame, also from the slicer it doesn't line up with the 
 whole image at all, view slicer to confirm, but that might just be from the space origin that is fixed when we run it here] 
