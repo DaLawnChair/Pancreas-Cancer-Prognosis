@@ -37,14 +37,11 @@ from imageSubtractionFunctions import *
 
 
 original = sitk.read("pancreas_data/pancreas_data/neoadjuvant_pdac/01/01_neo_pdac_pre_Tumor.seg.nrrd")
-original = sitk.GetArrayFromImage(original).T
-
-original[original == -1000] = 0
-original[original > 1] = 1
-original[original <0] = 1
-print(original.shape)
-
-modified = sitk.GetImageFromArray(original)
+originalArray = sitk.GetArrayFromImage(original).T
+originalArray[originalArray == -1000] = 0
+originalArray[originalArray > 1] = 1
+originalArray[originalArray <0] = 1
+modified = sitk.GetImageFromArray(originalArray)
 modified.CopyInformation(original)
 
 sitk.WriteImage(modified, "lol.seg.nrrd")

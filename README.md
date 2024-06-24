@@ -1,5 +1,9 @@
 Current progress:
-* Dropped more data from the xsxl which didn't have RECIST criteria and also converted LVI and PNI cases where N/A is was the given value and turned it into -999 (which can be treated the same in our case)
+* Copied over the functions from imageSubtraction.py to imageSegmentaitonMultiple, deleleted the .py 
+* Refractor the preproccess function to multiple individual functions
+* Make PDAC-Response_working.xsxl only have 2 columns, the case name and the recist criteria
+* Removed the 'throw-away' of the values of croppedSegment[croppedSegment<0.0001] = 0 as it is not needed after further inspection
+* Removed cases from the xsxl that have fewer than 7 slices as well as the corrupted pre-treatment cases CASE533 and CASE629
 
 Need to do
 * Apply image transformations on these images
