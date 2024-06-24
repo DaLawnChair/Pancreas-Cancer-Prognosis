@@ -1,14 +1,13 @@
 Current progress:
-* Fixed CASE265, CASE535, and CASE578 with having empty segmentations within the segmentation range
-* Allowed ability to change verboseness of preprocess()
-* Added view of the whole CT overlayed with the mask in preprocess()
-* Removed changes most functionality with post-treatment images as they cause lots of issues
-* Added imageSegmentationSingleEval.ipynb, which enables single case evaluation.
+* Dropped more data from the xsxl which didn't have RECIST criteria and also converted LVI and PNI cases where N/A is was the given value and turned it into -999 (which can be treated the same in our case)
 
-Need to do:
+Need to do
+* Apply image transformations on these images
+* Choose fixed image dimension for all images to put into model 
+* Analyze and choose which features are important to the underlying goal, predicting progression through RECIST_PostNAC category
+
+Need to do [old]:
 * Fix cases with post and whole not lining up, specifically when the z size of the whole segment is less than the post segments' [This is due to the images themselves not lining up, not sure how to fix]
 * Accept a 1D array for the case of CASE546 post-treatment
 * View and fix case ids above CASE546
-* Apply image transformations on these images
-* Categorize data based on the .xsxl file, analyzing potential train-test splits
-* Choose fixed image dimension for all images to put into model 
+

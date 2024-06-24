@@ -17,6 +17,7 @@ CASE578: weird missing some segmentation inbetween proper images [fixed now]
 CASE629: whole segment is corrupted/is completely empty
 
 
+
 Cases for the post-treatment:
 
 Some images in post has .mha.mha (546157) [now fixed]
