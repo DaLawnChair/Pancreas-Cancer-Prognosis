@@ -1,11 +1,11 @@
 Current progress:
-* Copied over the functions from imageSubtraction.py to imageSegmentaitonMultiple, deleleted the .py 
-* Refractor the preproccess function to multiple individual functions
-* Make PDAC-Response_working.xsxl only have 2 columns, the case name and the recist criteria
-* Removed the 'throw-away' of the values of croppedSegment[croppedSegment<0.0001] = 0 as it is not needed after further inspection
-* Removed cases from the xsxl that have fewer than 7 slices as well as the corrupted pre-treatment cases CASE533 and CASE629
+* Added code to drop all cases that have slice thickness less than 13
+* getLargestSlice() now returns an dictionary of the index and an dictionary with sliceNumber and index in ascending order
+* updateSlices() now can delete values of slices where the # of slices is greater than the param desiredNumberOfSlices
+* Validated that the slices for >13 work with updateSlices() 
+* Added documentation to updateSlices() where we duplicate slices
 
-Need to do
+Need to do [current]:
 * Apply image transformations on these images
 * Choose fixed image dimension for all images to put into model 
 * Analyze and choose which features are important to the underlying goal, predicting progression through RECIST_PostNAC category
