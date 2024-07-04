@@ -1,9 +1,6 @@
 Current progress:
-* Added code to drop all cases that have slice thickness less than 13
-* getLargestSlice() now returns an dictionary of the index and an dictionary with sliceNumber and index in ascending order
-* updateSlices() now can delete values of slices where the # of slices is greater than the param desiredNumberOfSlices
-* Validated that the slices for >13 work with updateSlices() 
-* Added documentation to updateSlices() where we duplicate slices
+* Added code for a single slice model in imagSegmentationMultipleSingleSlice.ipynb
+ 
 
 Need to do [current]:
 * Apply image transformations on these images
