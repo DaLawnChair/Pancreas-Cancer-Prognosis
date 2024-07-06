@@ -11,3 +11,7 @@ welcome-to-docker
 PDAC response.zip
 PDAC response/
 remove soon.txt
+Pre-treatment-only-pres.zip
+Pre-treatment-only-pres/
+model_weights.torch
+imageSegmentationMultipleSingleSlice.py
