@@ -1,16 +1,13 @@
-Current progress:
-* Added code for a single slice model in imagSegmentationMultipleSingleSlice.ipynb
-* Updated code to work on a python3.8.10 virtual environment as opposed to conda so it can be run on purely pip installs instead of a mix of pip and conda, which causes issues when downloading packages for the GPU server
-(Note when installing foundation-cancer-image-biomarker on the GPU serer I get the following error:
-ERROR: project-lighter 0.0.2a19 has requirement loguru<0.7.0,>=0.6.0, but you'll have loguru 0.7.2 which is incompatible.
-ERROR: project-lighter 0.0.2a19 has requirement pandas<2.0.0,>=1.5.3, but you'll have pandas 2.0.3 which is incompatible.)
-* Added used packages into imageSegmentationMultipleSingleSlice.ipynb
-* Added CLI command to run the notebook using jupyter nbconvert
- 
+Current progress: 
+* Added weighted sampler for the training set, balancing the classes (perhaps not working properly, need to reevaluate)
+* Added a ResNet50 sampler model which will be used to evaluate my data agumentaton
+* Added measures to save model training history, weights, scripts and notebooks
+* Added method to read in history from pickle file
 
 Need to do [current]:
-* Apply image transformations on these images
-* Choose fixed image dimension for all images to put into model 
+* Add in testing validation training set
+* Evaluate different types of evaluate metrics on the testing set
+* Try different splits of the training set
 * Analyze and choose which features are important to the underlying goal, predicting progression through RECIST_PostNAC category
 
 Need to do [old]:
