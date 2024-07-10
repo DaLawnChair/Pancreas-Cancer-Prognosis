@@ -16,3 +16,5 @@ Pre-treatment-only-pres/
 model_weights.torch
 imageSegmentationMultipleSingleSlice.py
 Tests
+.venv
+researchpip/

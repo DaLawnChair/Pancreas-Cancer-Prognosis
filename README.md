@@ -1,10 +1,8 @@
 Current progress: 
-* Added a dataloader to the testing set
-* Added more variables to describe the model more rigerously
-* Added in a random seed of 0 for the transformations
-* Cleaning imports and documentation
-* Save and display training plots
-* Turned the model into a class
+* Removed the normalizaiton step in preprocessing and moved it over to the data augmentation step as it caused issue with the number of slices 
+* Trying out a 3D model with the Foundation model, needed to redo the image augmentations with torchio for 3D scans, didn't work out b/c of weird issues regarding the loading of data 
+(TypeError: expected TensorOptions(dtype=float, device=cpu, layout=Strided, requires_grad=false (default), pinned_memory=false (default), memory_format=(nullopt)) (got TensorOptions(dtype=double, device=cpu, layout=Strided, requires_grad=false (default), pinned_memory=false (default), memory_format=(nullopt)))
+)
 
 Need to do [current]:
 * Find out why model always predicts 1 in testing set, despite it getting 100% in every epoch in training set
