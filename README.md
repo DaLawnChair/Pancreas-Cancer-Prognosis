@@ -1,12 +1,10 @@
 Current progress: 
-* Removed the normalizaiton step in preprocessing and moved it over to the data augmentation step as it caused issue with the number of slices 
-* Trying out a 3D model with the Foundation model, needed to redo the image augmentations with torchio for 3D scans, didn't work out b/c of weird issues regarding the loading of data 
-(TypeError: expected TensorOptions(dtype=float, device=cpu, layout=Strided, requires_grad=false (default), pinned_memory=false (default), memory_format=(nullopt)) (got TensorOptions(dtype=double, device=cpu, layout=Strided, requires_grad=false (default), pinned_memory=false (default), memory_format=(nullopt)))
-)
+* Moved back to 2D classification
+* Changed batchsize from 1 to 8 and froze the layers of the resnet, seems to have fixed the issue of it only guessing 1
+* Checking Accuracy, F1, and Recall of model. Currently being miscalculated as all 100%s
 
 Need to do [current]:
-* Find out why model always predicts 1 in testing set, despite it getting 100% in every epoch in training set
-* Why does the model get 100% on every epoch in the training set and have good 
+* Find out why the accuracy, F1, and Recall of the model are always 100% despite testing accuracy being different
 * Evaluate different types of evaluate metrics on the testing set
 * Try different splits of the training set
 * Analyze and choose which features are important to the underlying goal, predicting progression through RECIST_PostNAC category
