@@ -1,7 +1,6 @@
 Current progress: 
-* Moved back to 2D classification
-* Changed batchsize from 1 to 8 and froze the layers of the resnet, seems to have fixed the issue of it only guessing 1
-* Checking Accuracy, F1, and Recall of model. Currently being miscalculated as all 100%s
+* Fixed reasoning for why the testing metrics were always 100%
+* Add supporting code for implementing straftified k folds
 
 Need to do [current]:
 * Find out why the accuracy, F1, and Recall of the model are always 100% despite testing accuracy being different
