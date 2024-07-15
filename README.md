@@ -1,11 +1,11 @@
 Current progress: 
-* Fixed reasoning for why the testing metrics were always 100%
-* Add supporting code for implementing straftified k folds
+* Updated the model to have batchnormalization and dropout
+* Added in methods to make transform.compose objects to test different parameters
 
 Need to do [current]:
-* Find out why the accuracy, F1, and Recall of the model are always 100% despite testing accuracy being different
+* Look into why the performance of each fold is the same, but also why between different scenarios are also the same (perhaps random rotation doesn't do much)
 * Evaluate different types of evaluate metrics on the testing set
-* Try different splits of the training set
+
 * Analyze and choose which features are important to the underlying goal, predicting progression through RECIST_PostNAC category
 
 Need to do [old]:
