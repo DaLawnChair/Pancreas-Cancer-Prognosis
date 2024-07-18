@@ -1,7 +1,10 @@
 Current progress: 
-* Transforms: turned min-max normalization to standardization with mean dn std. Performing augmentations, and then normalization now
-* Added important metrics to a dataframe for easy viewing of the final results after K fold crossvalidation
-* Added new file to run the folder the images with background (THIS IS WHERE THE NEW CHANGES ARE)
+* Added plots to the training histories
+* when getting data, the data will be normalized, then augmented, and the normalized again, to be easier to view the differences in normalization
+* Trippled the size of the model with adding 2 layers. Made the output layer to to a softmax function rather than the softmax function values go to the output layer
+* Added some data augmentations to try out, they scale linearly with in intensity
+* Made excel sheet include ending epochs, not just the singular one
+* Made learning rate of the  model adjustable
 
 Need to do [current]:
 * Evaluate different types of evaluate metrics on the testing set
@@ -9,12 +12,8 @@ Need to do [current]:
 
 
 ADD:
-* put all important metrics in a csv file
-* do validation set from the training set and see how it's accuracy is when training XXX
-* implement early stopping XXX
 * resize images to largest box size for all patients, and apply that box to all tumors to stop auto-rescaling 
 * groupkfolds with classifcation on each slices, then do majourity voting on each prediciton to decide final classificaiton (gives way more data to work with and learn from)
-* add guassian noise to the test Tranformation XXXX
 
 For model testing:
 * weight normalization layer, and view the different techniques (ie L2)
