@@ -1,10 +1,9 @@
 Current progress: 
-* Added plots to the training histories
-* when getting data, the data will be normalized, then augmented, and the normalized again, to be easier to view the differences in normalization
-* Trippled the size of the model with adding 2 layers. Made the output layer to to a softmax function rather than the softmax function values go to the output layer
-* Added some data augmentations to try out, they scale linearly with in intensity
-* Made excel sheet include ending epochs, not just the singular one
-* Made learning rate of the  model adjustable
+* No longer taking the transpose of the image in the preprocessing stage, now works with the proper form of [slice, width, height]
+* Added implementation with adding background/no background and with global largest box or by fit-and-scale individual tumors
+* Changed the view of the displayCroppedSegmentations() to display on grayscale of the windows. Implementing the new changes makes the background not completely black for whatever reason. I have no idea why it now doesn't auto-black everything outside of the range of the segment
+* Preprocess() no longer has the variables for the upper and lower bounds of the window
+* More testing needed to ensure that the preprocessing performs properly on all segments
 
 Need to do [current]:
 * Evaluate different types of evaluate metrics on the testing set
@@ -16,7 +15,7 @@ ADD:
 * groupkfolds with classifcation on each slices, then do majourity voting on each prediciton to decide final classificaiton (gives way more data to work with and learn from)
 
 For model testing:
-* weight normalization layer, and view the different techniques (ie L2)
+* weight normalization layer, and view the different techniques (ie L2 and AdamW)
 * experiment with batch size (test with grid search)
 * try SGD and different params for ADAM 
 * learning rate
