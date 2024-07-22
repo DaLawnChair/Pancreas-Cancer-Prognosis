@@ -1,9 +1,6 @@
 Current progress: 
-* No longer taking the transpose of the image in the preprocessing stage, now works with the proper form of [slice, width, height]
-* Added implementation with adding background/no background and with global largest box or by fit-and-scale individual tumors
-* Changed the view of the displayCroppedSegmentations() to display on grayscale of the windows. Implementing the new changes makes the background not completely black for whatever reason. I have no idea why it now doesn't auto-black everything outside of the range of the segment
-* Preprocess() no longer has the variables for the upper and lower bounds of the window
-* More testing needed to ensure that the preprocessing performs properly on all segments
+* Validated that the results are good for both scaledBoxes=None and scaledBoxes=<largest box> work well for the dataset
+* Fixed highsight issues with cv2 resize function, now resizes each individual scan and has a try-except for invalid input as the model
 
 Need to do [current]:
 * Evaluate different types of evaluate metrics on the testing set
