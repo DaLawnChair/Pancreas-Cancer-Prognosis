@@ -1,10 +1,10 @@
-Current progress: 
-* Added tracker for groups (didn't implement the stratification yet)
-* folders are now sorted, may have been causing issues depending on what computer ran the tests on
-* Added parser to model 
-* Added learning rate parameter
-* Changed appendMetricsToXLSX() to only add values into a dataframe object that is open in the generateKFoldsValidation()
-* Added method to add descriptor to of the experiment in addEvalDetailToModel()
+Current progress:
+* Fixed printing of evalDetailLine to the .xlsx file
+* Added modularity for dropoutRate of model and easier time with testing different number of segments
+* Added conditions to work on both notebooks and scripts with the argparse
+* Fixed bug with argparse not giving the correct value for the bool type values
+* Add check for when validation loss is nan, making it stop training
+* Added storage and generation of .npy files for quicker loading of croppedSegmentsList, speeding it up from ~4 minutes on the computer to ~5 seconds
 
 Need to do [current]:
 * Evaluate different types of evaluate metrics on the testing set
