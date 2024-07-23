@@ -1,11 +1,14 @@
 Current progress: 
-* Validated that the results are good for both scaledBoxes=None and scaledBoxes=<largest box> work well for the dataset
-* Fixed highsight issues with cv2 resize function, now resizes each individual scan and has a try-except for invalid input as the model
+* Added tracker for groups (didn't implement the stratification yet)
+* folders are now sorted, may have been causing issues depending on what computer ran the tests on
+* Added parser to model 
+* Added learning rate parameter
+* Changed appendMetricsToXLSX() to only add values into a dataframe object that is open in the generateKFoldsValidation()
+* Added method to add descriptor to of the experiment in addEvalDetailToModel()
 
 Need to do [current]:
 * Evaluate different types of evaluate metrics on the testing set
 * Analyze and choose which features are important to the underlying goal, predicting progression through RECIST_PostNAC category
-
 
 ADD:
 * resize images to largest box size for all patients, and apply that box to all tumors to stop auto-rescaling 
