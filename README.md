@@ -1,10 +1,10 @@
 Current progress:
-* Fixed printing of evalDetailLine to the .xlsx file
-* Added modularity for dropoutRate of model and easier time with testing different number of segments
-* Added conditions to work on both notebooks and scripts with the argparse
-* Fixed bug with argparse not giving the correct value for the bool type values
-* Add check for when validation loss is nan, making it stop training
-* Added storage and generation of .npy files for quicker loading of croppedSegmentsList, speeding it up from ~4 minutes on the computer to ~5 seconds
+* Added stratifiedGroupKFolds as a possible arrangement for the model, it uses all slices from the 3D scans and treats them as individual images under a caseID to increase datapoints and prevent data leaking
+* Added check for forward() where the batchnorm layers are not calculated if the batch size is 1 as this can give issues
+* Updated the 3d model
+* Updated the evalDetailLine to have the entire argument line
+* A lot of data got deleted from my test cases :sadface:
+* Reformated the xlsx to be easier to read and have more information
 
 Need to do [current]:
 * Evaluate different types of evaluate metrics on the testing set
