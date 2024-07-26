@@ -1,10 +1,12 @@
 Current progress:
-* Added stratifiedGroupKFolds as a possible arrangement for the model, it uses all slices from the 3D scans and treats them as individual images under a caseID to increase datapoints and prevent data leaking
-* Added check for forward() where the batchnorm layers are not calculated if the batch size is 1 as this can give issues
-* Updated the 3d model
-* Updated the evalDetailLine to have the entire argument line
-* A lot of data got deleted from my test cases :sadface:
-* Reformated the xlsx to be easier to read and have more information
+* Changed transforms tested to non-normalized values, no longer normalizing image, applying augment, then normalizing again
+* Updated weights of image
+* Set the 0 transform to None instead of having each transform's value as very low
+* Added in a default training_transform convertDataToLoaders(), made the dataloader for training have shuffle=True
+* Made a smaller model to evaluate differences easier between models, renamed the old resnet50classificaiton model to large2d
+* Updated to newer weights, much better performance (0.27 vs 0.49 for average accuracy for the small2D model, not that noticiable changes for large2d model)
+* No longer doing a train, val, test set. Now doing train and test set where val=test
+
 
 Need to do [current]:
 * Evaluate different types of evaluate metrics on the testing set

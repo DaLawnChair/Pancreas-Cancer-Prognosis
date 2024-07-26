@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[22]:
+# In[1]:
 
 
 # Convert to python script, remember to delete/comment the next line in the actual file
-# ! jupyter nbconvert --to python imageSegmentationWithBackground.ipynb --output testSamples24-7.py
+# ! jupyter nbconvert --to python imageSegmentationWithBackground.ipynb --output testSamples26-7.py
 
 
 # ### # Imports
 
-# In[27]:
+# In[2]:
 
 
 # Image reading and file handling 
@@ -85,7 +85,7 @@ from sklearn.metrics import ConfusionMatrixDisplay
 
 # ## Get the data from the .xsxl file
 
-# In[4]:
+# In[3]:
 
 
 columns = ['TAPS_CaseIDs_PreNAT','RECIST_PostNAT', 'Slice_Thickness']
@@ -178,7 +178,7 @@ def twoImageAlignProceess(wholeHeader,segmentHeader,verbose):
     return wholeHeader, segmentHeader, False
 
 
-# In[6]:
+# In[4]:
 
 
 # Image changing and conversion
@@ -240,7 +240,7 @@ def convertNdArrayToCV2Image(images, resolution = (64,64)):
     return resizedImages
 
 
-# In[7]:
+# In[15]:
 
 
 # Displaying segments
@@ -258,7 +258,9 @@ def displayCroppedSegmentations(croppedSegment):
     for idx in range(croppedSegment.shape[0]):        
         if idx%columnLen == 0 and idx>0:
             rowIdx += 1        
-        axis[rowIdx][idx%columnLen].imshow(croppedSegment[idx,:,:] , cmap="gray", vmin = 40-(350)/2, vmax=40+(350)/2)
+        # axis[rowIdx][idx%columnLen].imshow(croppedSegment[idx,:,:] , cmap="gray", vmin = 40-(350)/2, vmax=40+(350)/2)
+        axis[rowIdx][idx%columnLen].imshow(croppedSegment[idx,:,:] , cmap="gray")
+
         axis[rowIdx][idx%columnLen].axis('off')
 
     # Turn off the axis of the rest of the subplots
@@ -291,7 +293,7 @@ def displayOverlayedSegmentations(segmentedSlices, augmented_whole, augmented_se
     plt.show()
 
 
-# In[8]:
+# In[6]:
 
 
 # Getting optimal slice(s) to use
@@ -397,7 +399,7 @@ def updateSlices(croppedSegment, desiredNumberOfSlices=1):
         return croppedSegment
 
 
-# In[9]:
+# In[19]:
 
 
 # Getting and finding the optimal dimensions for the bounding box
@@ -415,52 +417,106 @@ def getSegmentBoxDimensions(preSegmentHeader):
     
     return width, height
 
-def findLargestBoxSize(cases): 
-    allFolders = ['CASE244','CASE246','CASE247','CASE251','CASE254','CASE256','CASE263','CASE264','CASE265','CASE270','CASE272','CASE274',
-                    'CASE467','CASE468','CASE470','CASE471','CASE472','CASE476','CASE479','CASE480','CASE482','CASE484','CASE485','CASE488','CASE494','CASE496','CASE499',
-                    'CASE500','CASE505','CASE515','CASE520','CASE523','CASE525','CASE531','CASE533','CASE534','CASE535','CASE537','CASE539','CASE541','CASE543','CASE546','CASE547','CASE548','CASE549','CASE550','CASE551','CASE554','CASE555','CASE557','CASE559','CASE560','CASE562','CASE563','CASE564','CASE565','CASE568','CASE569','CASE572','CASE574','CASE575','CASE577','CASE578','CASE580','CASE581','CASE585','CASE586','CASE587','CASE588','CASE589','CASE593','CASE594','CASE596','CASE598',
-                    'CASE600','CASE601','CASE602','CASE603','CASE604','CASE605','CASE608','CASE610','CASE611','CASE615','CASE616','CASE621','CASE622','CASE623','CASE624','CASE629','CASE630','CASE632','CASE635']
+def getPixelCounts(preSegmentHeader):
+    segment = sitk.GetArrayFromImage(preSegmentHeader)
+    counts = []
+    for i in range(segment.shape[0]):
+        pixelCount = np.sum(segment[i,:,:])
+        if pixelCount > 0:
+            counts.append(pixelCount)
+    counts.sort() 
+    return counts 
+    
+
+# def findLargestBoxSize(cases): 
+#     allFolders = ['CASE244','CASE246','CASE247','CASE251','CASE254','CASE256','CASE263','CASE264','CASE265','CASE270','CASE272','CASE274',
+#                     'CASE467','CASE468','CASE470','CASE471','CASE472','CASE476','CASE479','CASE480','CASE482','CASE484','CASE485','CASE488','CASE494','CASE496','CASE499',
+#                     'CASE500','CASE505','CASE515','CASE520','CASE523','CASE525','CASE531','CASE533','CASE534','CASE535','CASE537','CASE539','CASE541','CASE543','CASE546','CASE547','CASE548','CASE549','CASE550','CASE551','CASE554','CASE555','CASE557','CASE559','CASE560','CASE562','CASE563','CASE564','CASE565','CASE568','CASE569','CASE572','CASE574','CASE575','CASE577','CASE578','CASE580','CASE581','CASE585','CASE586','CASE587','CASE588','CASE589','CASE593','CASE594','CASE596','CASE598',
+#                     'CASE600','CASE601','CASE602','CASE603','CASE604','CASE605','CASE608','CASE610','CASE611','CASE615','CASE616','CASE621','CASE622','CASE623','CASE624','CASE629','CASE630','CASE632','CASE635']
 
 
-    onlySeeTheseCases = allFolders
-    baseFilepath = 'Pre-treatment-only-pres/'
+#     onlySeeTheseCases = allFolders
+#     baseFilepath = 'Pre-treatment-only-pres/'
 
-    largestWidth, largestHeight = 0,0
-    # Find the largest box that fits all slices
-    for folder in os.listdir(baseFilepath):
-        # Skip cases that are not in the excel sheet
-        if folder not in cases:
-            continue
-        # Exclude to cases that we haven't seen yet
-        if folder not in onlySeeTheseCases:
-            continue 
-        count = 0
-        for file in os.listdir(os.path.join(baseFilepath,folder)):
-            if 'TUM' in file or 'SMV' in file: # pre-treatment segmentation 
-                preSegmentHeader = sitk.ReadImage(os.path.join(baseFilepath,folder,file))
-            else: 
-                continue
+#     largestWidth, largestHeight = 0,0
+#     # Find the largest box that fits all slices
+#     for folder in os.listdir(baseFilepath):
+#         # Skip cases that are not in the excel sheet
+#         if folder not in cases:
+#             continue
+#         # Exclude to cases that we haven't seen yet
+#         if folder not in onlySeeTheseCases:
+#             continue 
+#         count = 0
+#         for file in os.listdir(os.path.join(baseFilepath,folder)):
+#             if 'TUM' in file or 'SMV' in file: # pre-treatment segmentation 
+#                 preSegmentHeader = sitk.ReadImage(os.path.join(baseFilepath,folder,file))
+#             else: 
+#                 continue
 
-            print(folder)
-            width, height = getSegmentBoxDimensions(preSegmentHeader)
-            print(f'Width= {width}, Height= {height} (Largest? {width > largestWidth} and {height > largestHeight})')
-            print('=============================')
+#             print(folder)
+#             width, height = getSegmentBoxDimensions(preSegmentHeader)
+#             print(f'Width= {width}, Height= {height} (Largest? {width > largestWidth} and {height > largestHeight})')
+#             print('=============================')
 
-            # Get the largest width and height
-            if width > largestWidth:
-                largestWidth = width
-            if height > largestHeight:  
-                largestHeight = height
+#             # Get the largest width and height
+#             if width > largestWidth:
+#                 largestWidth = width
+#             if height > largestHeight:  
+#                 largestHeight = height
 
 
-    dimensions = (largestWidth,largestHeight)
-    return dimensions
+#     dimensions = (largestWidth,largestHeight)
+#     return dimensions
+
+
+## FIND THE SMALLEST BOX SIZE
+# def findSmallestSegmentPixelCount(cases): 
+#     allFolders = ['CASE244','CASE246','CASE247','CASE251','CASE254','CASE256','CASE263','CASE264','CASE265','CASE270','CASE272','CASE274',
+#                     'CASE467','CASE468','CASE470','CASE471','CASE472','CASE476','CASE479','CASE480','CASE482','CASE484','CASE485','CASE488','CASE494','CASE496','CASE499',
+#                     'CASE500','CASE505','CASE515','CASE520','CASE523','CASE525','CASE531','CASE533','CASE534','CASE535','CASE537','CASE539','CASE541','CASE543','CASE546','CASE547','CASE548','CASE549','CASE550','CASE551','CASE554','CASE555','CASE557','CASE559','CASE560','CASE562','CASE563','CASE564','CASE565','CASE568','CASE569','CASE572','CASE574','CASE575','CASE577','CASE578','CASE580','CASE581','CASE585','CASE586','CASE587','CASE588','CASE589','CASE593','CASE594','CASE596','CASE598',
+#                     'CASE600','CASE601','CASE602','CASE603','CASE604','CASE605','CASE608','CASE610','CASE611','CASE615','CASE616','CASE621','CASE622','CASE623','CASE624','CASE629','CASE630','CASE632','CASE635']
+
+
+#     onlySeeTheseCases = allFolders
+#     baseFilepath = 'Pre-treatment-only-pres/'
+
+#     histories = []
+#     # Find the largest box that fits all slices
+#     for folder in os.listdir(baseFilepath):
+#         # Skip cases that are not in the excel sheet
+#         if folder not in cases:
+#             continue
+#         # Exclude to cases that we haven't seen yet
+#         # if folder not in onlySeeTheseCases:
+#         #     continue 
+#         count = 0
+#         for file in os.listdir(os.path.join(baseFilepath,folder)):
+#             if 'TUM' in file or 'SMV' in file: # pre-treatment segmentation 
+#                 preSegmentHeader = sitk.ReadImage(os.path.join(baseFilepath,folder,file))
+#             else: 
+#                 continue
+
+#             print(folder)
+#             histories.append(getPixelCounts(preSegmentHeader)) 
+
+#     return histories
+
+# histories = findSmallestSegmentPixelCount(cases)
+# smallests = [] 
+# for history in histories:
+#     smallests.append(history[0])
+# smallests.sort()
+# print(smallests)
+
+
+
 
 
 # ## Perform preprocessing on multiple images
 # 
 
-# In[10]:
+# In[8]:
 
 
 def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, scaledBoxes = None):
@@ -525,7 +581,7 @@ def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, sca
     return whole, croppedSegment, error
 
 
-# In[5]:
+# In[10]:
 
 
 #ADD argparser
@@ -536,6 +592,8 @@ print('Current System:',sys.argv[0])
 # python testSamples22-7.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="" -hasBackground=False -usesGlobalSize=True -grouped2D=False -dropoutRate=0.2
 #Current
 # python testSamples23-7.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="testLoading" -hasBackground=f -usesLargestBox=f -segmentsMultiple=1 -dropoutRate=0.2 -grouped2D=f
+
+# python testSamples26-7.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="testLoading" -hasBackground=f -usesLargestBox=f -segmentsMultiple=1 -dropoutRate=0.2 -grouped2D=f -modelChosen='Small2D'
 
 
 #Check if we are using a notebook or not
@@ -550,6 +608,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     dropoutRate = 0.2
     grouped2D = False
     weight_decay = 0.01
+    modelChosen = 'Small2D' #Large2D, Small2D
 
 else:
     parser = argparse.ArgumentParser(description="Model information")
@@ -563,7 +622,8 @@ else:
     parser.add_argument('-dropoutRate', type=float, help='Dropout rate for the model', default=0.2)
     parser.add_argument('-grouped2D', type=str, help='Grouping the 3D scans as individual 2D images', default='f')
     parser.add_argument('-weightDecay', type=float, help='Weight Decay for the model', default=0.01)
-
+    parser.add_argument('-modelChosen', type=str, help='Selected Model', default='Large2D')
+    
 
     
     args = parser.parse_args()
@@ -578,9 +638,11 @@ else:
     dropoutRate = args.dropoutRate
     grouped2D = True if args.grouped2D=='t' else False
     weight_decay = args.weightDecay
+    modelChosen = args.modelChosen
 
 
-print(f'BatchSize: {batchSize}, Epochs: {numOfEpochs}, Learning Rate: {learningRate}, Eval Detail Line: {evalDetailLine}, Has Background: {hasBackground}, Uses Largest Box: {usesLargestBox}, Segments Multiple: {segmentsMultiple}, Dropout Rate: {dropoutRate}, Grouped2D: {grouped2D}, weightDecay: {weight_decay}')
+print(f'BatchSize: {batchSize}, Epochs: {numOfEpochs}, Learning Rate: {learningRate}, Eval Detail Line: {evalDetailLine}, Has Background: {hasBackground}, Uses Largest Box: {usesLargestBox}, Segments Multiple: {segmentsMultiple}, \
+      Dropout Rate: {dropoutRate}, Grouped2D: {grouped2D}, weightDecay: {weight_decay}, modelChosen: {modelChosen}')
 
 
 # In[12]:
@@ -623,6 +685,8 @@ if grouped2D:
     print('===================================================')
 
 
+
+
 # In[20]:
 
 
@@ -650,18 +714,19 @@ if grouped2D:
 #     print('==============================================================')
 #     print(folder, 'All files read:')
     
-#     whole, croppedSegment,error = preprocess(wholeHeader, preSegmentHeader, verbose=0, useBackground=hasBackground, scaledBoxes=dimensions) 
-#     if error:
-#         print('Error in preprocessing')
-#         # continue
     
-#     # groups += [folder]*desiredSliceNumber # Add the segment slices to the group
+    # whole, croppedSegment,error = preprocess(wholeHeader, preSegmentHeader, verbose=0, useBackground=hasBackground, scaledBoxes=dimensions) 
+    # if error:
+    #     print('Error in preprocessing')
+    #     # continue
     
-#     if segmentsMultiple==1:
-#         largestSlice,_ = getLargestSlice(croppedSegment)
-#         updatedCroppedSegment = croppedSegment[largestSlice,:,:]
-#     else:
-#         updatedCroppedSegment = updateSlices(croppedSegment,desiredSliceNumber)
+    # # groups += [folder]*desiredSliceNumber # Add the segment slices to the group
+    
+    # if segmentsMultiple==1:
+    #     largestSlice,_ = getLargestSlice(croppedSegment)
+    #     updatedCroppedSegment = croppedSegment[largestSlice,:,:]
+    # else:
+    #     updatedCroppedSegment = updateSlices(croppedSegment,desiredSliceNumber)
         
 #     croppedSegmentsList.append(updatedCroppedSegment)
     
@@ -670,7 +735,7 @@ if grouped2D:
 # np.save(f'{name}.npy',croppedSegmentsList, allow_pickle=False)
 
 
-# In[13]:
+# In[16]:
 
 
 #Save the results of the different combinations of backgrounds and sizes
@@ -679,7 +744,7 @@ name = f'hasBackground={hasBackground}-usesLargestBox={usesLargestBox}-segmentsM
 croppedSegmentsList = np.load(f'preprocessCombinations/{name}.npy')
 
 
-if len(recistCriteria) > 100: #if >100 then we are doing groupings of 2D images
+if grouped2D: #if >100 then we are doing groupings of 2D images
     temp = np.zeros((croppedSegmentsList.shape[0]*croppedSegmentsList.shape[1], croppedSegmentsList.shape[2], croppedSegmentsList.shape[3]))
     for image in range(croppedSegmentsList.shape[0]):
         for slice in range(croppedSegmentsList.shape[1]):
@@ -723,10 +788,13 @@ def generateTransform(RandomHorizontalFlipValue=0.5,RandomVerticalFlipValue=0.5,
 
 
 def getTransformValue(transform, desiredTranform, desiredTranformValue):
+    if transform==None or desiredTranform==None or desiredTranformValue==None:
+      return None
     for t in transform.transforms:
         if isinstance(t, desiredTranform):
             return t.__getattribute__(desiredTranformValue)
     return None
+
 
 
 # In[16]:
@@ -734,9 +802,10 @@ def getTransformValue(transform, desiredTranform, desiredTranformValue):
 
 # For 2D images:
 # ## Working with pytorch tensors
-class TorchDataset(Dataset):
+class PatientData(Dataset):
     def __init__(self, image, classifications, transform=None):
         self.data = image
+        # Convert classification to torch tensor
         temp = []
         for classification in classifications:
             convert = torch.tensor(classification, dtype=torch.int64) # casting to long
@@ -752,11 +821,9 @@ class TorchDataset(Dataset):
     def __getitem__(self, idx):
         image = self.data[idx]
         
-        # Normalize the images pre augmentation
-        image = (image - np.mean(image)) / np.std(image)
         # Apply augmentations if there are any
         if self.transform:
-            image = self.transform(image)
+            image = self.transform(image).type(torch.float)
         # Normalize the images post augmentation
         image = (image - torch.mean(image)) / torch.std(image)
         label = self.classification[idx]
@@ -766,21 +833,25 @@ class TorchDataset(Dataset):
 def convertDataToLoaders(xTrain, yTrain, xVal, yVal, xTest, yTest, training_data_transforms = None, batchSize=8):
     ## Sample the data with 75% of the training set 
     # TrainBalancedSampler = WeightedRandomSampler(weightsForClasses, len(yTrain)//2+len(yTest)//4)
-        
+    
     # Testing data tranfrom, should be just the plain images
     testing_data_transforms = transforms.Compose([
         transforms.ToPILImage(),
         transforms.ToTensor()
     ]) 
 
+    # Use the same default training transform as the testing transform if not specified
+    if training_data_transforms == None:
+        training_data_transforms = testing_data_transforms
+        
     # Convert the testing sets to data loaders
-    trainingData = TorchDataset(xTrain, yTrain, transform=training_data_transforms)
-    trainingData = DataLoader(trainingData, batch_size=batchSize, shuffle=False)#, sampler= TrainBalancedSampler)
+    trainingData = PatientData(xTrain, yTrain, transform=training_data_transforms)
+    trainingData = DataLoader(trainingData, batch_size=batchSize, shuffle=True)#, sampler= TrainBalancedSampler)
 
-    validationData = TorchDataset(xVal, yVal, transform=testing_data_transforms)
+    validationData = PatientData(xVal, yVal, transform=testing_data_transforms)
     validationData = DataLoader(validationData, batch_size=batchSize, shuffle=False)
 
-    testingData = TorchDataset(xTest, yTest, transform=testing_data_transforms)
+    testingData = PatientData(xTest, yTest, transform=testing_data_transforms)
     testingData = DataLoader(testingData, batch_size=batchSize, shuffle=False)
 
     return trainingData, validationData, testingData, training_data_transforms
@@ -866,11 +937,12 @@ def convertDataToLoaders(xTrain, yTrain, xVal, yVal, xTest, yTest, training_data
 # In[18]:
 
 
-class ResNet50ClassificaitonModel(torch.nn.Module):
+class Large2D(torch.nn.Module):
     def __init__(self, dropoutRate=0.2):
-        super(ResNet50ClassificaitonModel, self).__init__()
+        super(Large2D, self).__init__()
 
         #Resnet50 as first layer
+        # self.resNet50 = models.resnet50(weights='IMAGENET1K_V2')
         self.resNet50 = models.resnet50(pretrained=True)
 
         # Modify the first convolutional layer to accept single-channel input
@@ -879,8 +951,7 @@ class ResNet50ClassificaitonModel(torch.nn.Module):
         # Freeze all layers of the resNet
         for param in self.resNet50.parameters():
             param.requires_grad = False
-        
-        
+                
         # Hidden layers with batchnorms
         self.batchNormalization0 = nn.BatchNorm1d(self.resNet50.fc.out_features)
         self.hiddenLayer1 = nn.Linear(self.resNet50.fc.out_features, 528)
@@ -924,9 +995,40 @@ class ResNet50ClassificaitonModel(torch.nn.Module):
         x = self.outputLayer(x)
         x = self.softmax(x)
         return x
+
+
+class Small2D(torch.nn.Module):
+    def __init__(self, dropoutRate=0.2):
+        super(Small2D, self).__init__()
+
+        #Resnet50 as first layer
+        # self.resNet50 = models.resnet50(weights='IMAGENET1K_V2')
+        self.resNet50 = models.resnet50(pretrained=True)
+
+        # Modify the first convolutional layer to accept single-channel input
+        self.resNet50.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=0, bias=True)
+
+        # Freeze all layers of the resNet
+        for param in self.resNet50.parameters():
+            param.requires_grad = False
+                
+        # Modify the final fully connected layer
+        num_features = self.resNet50.fc.out_features
+        self.fc = nn.Linear(num_features, 3)
+        self.softMax = nn.Softmax()
+
+    def forward(self, x):
+        x = self.resNet50(x)
+        x = self.fc(x)
+        x = self.softMax(x)
+        return x 
     
-def defineModel(dropoutRate=0.2,learningRate=0.001, weight_decay=0.01):
-    model = ResNet50ClassificaitonModel(dropoutRate)
+def defineModel(dropoutRate=0.2,learningRate=0.001, weight_decay=0.01, model = 'Small2D'):
+    if model == 'Small2D':
+        model = Small2D(dropoutRate)
+    else:
+        model = Large2D(dropoutRate)
+    
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(model.parameters(), lr=learningRate, weight_decay=weight_decay)
 
@@ -1333,7 +1435,7 @@ def averagePredictionTotals(predictions, numberOfTrials=5):
 def runModelFullStack(testPathName, testName, xTrain, yTrain, xVal, yVal, xTest, yTest, modelInformation, trainingTransform=None):
     # modelInformation = { 'learningRate': learningRate, 'dropoutRate': dropoutRate, 'batchSize': batchSize, 'numOfEpochs': numOfEpochs, 'weight_decay':weight_decay}
     trainingData, validationData, testingData, training_data_transforms = convertDataToLoaders(xTrain, yTrain, xVal, yVal, xTest, yTest, training_data_transforms = trainingTransform, batchSize=modelInformation['batchSize'])
-    model, criterion, optimizer = defineModel(dropoutRate=modelInformation['dropoutRate'], learningRate = modelInformation['learningRate'], weight_decay=modelInformation['weight_decay'])
+    model, criterion, optimizer = defineModel(dropoutRate=modelInformation['dropoutRate'], learningRate = modelInformation['learningRate'], weight_decay=modelInformation['weight_decay'], model = modelInformation['model'])
     model, criterion, device, history, endingEpoch = trainModel(model, criterion, optimizer, trainingData,validationData, numOfEpochs=modelInformation['numOfEpochs'])
     saveResults(testPathName, model, history, training_data_transforms, saveModel=False)
     confusionMatrix, accuracy, f1, recall, predictsTotal = evaluateModelOnTestSet(testPathName, model, testingData, criterion, device, saveConfusionMatrix = False, showConfusionMatrix=False)
@@ -1399,11 +1501,14 @@ def generateKFoldsValidation(identifier,identifierValue, modelInformation, group
         testName = f'{identifier}-{identifierValue}'
         
         testPathName = 'Tests/'+testName+f'/foldn{i+1}'
-        print(f'{identifier} RUN\n=========================================')
+        print(f'{identifier}: foldn{i+1} RUN\n=========================================')
         xTest, yTest = [croppedSegmentsList[i] for i in test_index], [recistCriteria[i] for i in test_index]
-        xTrain, yTrain = [croppedSegmentsList[i] for i in train_index[len(xTest):]], [recistCriteria[i] for i in train_index[len(yTest):]]
-        xVal, yVal = [croppedSegmentsList[i] for i in train_index[:len(xTest)]], [recistCriteria[i] for i in train_index[:len(yTest)]]
+        xTrain, yTrain = [croppedSegmentsList[i] for i in train_index], [recistCriteria[i] for i in train_index]
+        xVal, yVal = xTest, yTest # Set the validation set to the same as the testing set
+        #xVal, yVal = [croppedSegmentsList[i] for i in train_index[:len(xTest)]], [recistCriteria[i] for i in train_index[:len(yTest)]]
         
+
+
         # Convert the recist criteria to 0,1,2
         yTrain = [x-1 for x in yTrain]
         yVal = [x-1 for x in yVal]
@@ -1502,14 +1607,17 @@ def generateKFoldsValidation(identifier,identifierValue, modelInformation, group
 
 # weightsForClasses = [class1Percentage / (class1Percentage+class2Percentage+class3Percentage) , class3Percentage / (class1Percentage+class2Percentage+class3Percentage), class3Percentage / (class1Percentage+class2Percentage+class3Percentage)]
 
+# windowLower = 40-350/2
+# windowUpper = 40+350/2 
+
 #Make all transforms that I am going to test:
 transformsTested = {
-    "0%":generateTransform(RandomRotationValue=0, RandomElaticTransform=[0.01,0.01], brightnessConstant=0, contrastConstant=0.0, kernelSize=3, sigmaRange=(0.001,0.002)),
-    "20%":generateTransform(RandomRotationValue=20, RandomElaticTransform=[0.2,0.2], brightnessConstant=0.2, contrastConstant=0.2, kernelSize=3, sigmaRange=(0.001,0.2)),
-    "40%":generateTransform(RandomRotationValue=40, RandomElaticTransform=[0.40,0.40], brightnessConstant=0.4, contrastConstant=0.40, kernelSize=3, sigmaRange=(0.2,0.4)),
-    "60%":generateTransform(RandomRotationValue=60, RandomElaticTransform=[0.60,0.60], brightnessConstant=0.6, contrastConstant=0.6, kernelSize=3, sigmaRange=(0.4,0.6)),
-    "80%":generateTransform(RandomRotationValue=80, RandomElaticTransform=[0.8,0.8], brightnessConstant=0.8, contrastConstant=0.8, kernelSize=3, sigmaRange=(0.6,0.8)),
-    "100%":generateTransform(RandomRotationValue=100, RandomElaticTransform=[1.0,1.0], brightnessConstant=1.0, contrastConstant=1.0, kernelSize=3, sigmaRange=(0.8,1.0))    
+    "0":None
+    # "20":generateTransform(RandomRotationValue=20, RandomElaticTransform=[20,2], brightnessConstant=20, contrastConstant=20, kernelSize=3, sigmaRange=(0.001,0.4)),
+    # "40":generateTransform(RandomRotationValue=40, RandomElaticTransform=[40,4], brightnessConstant=40, contrastConstant=40, kernelSize=3, sigmaRange=(0.001,0.8)),
+    # "60":generateTransform(RandomRotationValue=60, RandomElaticTransform=[60,6], brightnessConstant=60, contrastConstant=60, kernelSize=3, sigmaRange=(0.001,1.2)),
+    # "80":generateTransform(RandomRotationValue=80, RandomElaticTransform=[80,8], brightnessConstant=80, contrastConstant=80, kernelSize=3, sigmaRange=(0.001,1.6)),
+    # "100":generateTransform(RandomRotationValue=100, RandomElaticTransform=[100,10], brightnessConstant=100, contrastConstant=100, kernelSize=3, sigmaRange=(0.001,2.0))    
 }
 
 
@@ -1520,7 +1628,26 @@ columns = ['name','numOfEpochs','batchSize','learningRate','dropoutRate','weight
 dataframe = pd.read_excel('testResults.xlsx', header=None, names=columns)
 addEvalDetailToModel(evalDetailLine, dataframe)
 
-modelInformation = { 'learningRate': learningRate, 'dropoutRate': dropoutRate, 'batchSize': batchSize, 'numOfEpochs':numOfEpochs, 'weight_decay':weight_decay, 'commandRan': ''.join(sys.argv)}
+
+
+# python testSamples24-7.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine='no background tumor boxes adamw' -hasBackground=f -usesLargestBox=f -segmentsMultiple=1 -dropoutRate=0.2 -grouped2D=f &&
+
+# python testSamples24-7.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine='background global boxes adamw' -hasBackground=t -usesLargestBox=t -segmentsMultiple=1 -dropoutRate=0.2 -grouped2D=f &&
+
+# python testSamples24-7.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine='background tumor boxes adamw' -hasBackground=t -usesLargestBox=f -segmentsMultiple=1 -dropoutRate=0.2 -grouped2D=f &&
+
+# python testSamples24-7.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine='no background global boxes adamw' -hasBackground=f -usesLargestBox=t -segmentsMultiple=1 -dropoutRate=0.2 -grouped2D=f &&
+
+# Generate the command ran for the test 
+commandRan = 'python'
+for details in sys.argv:
+    if 'evalDetailLine' or 'modelChosen' in details:
+        detailArray = details.split('=') 
+        details = f'{detailArray[0]}=\'{detailArray[1]}\''
+    commandRan += f' {details}'   
+print(commandRan)
+
+modelInformation = { 'learningRate': learningRate, 'dropoutRate': dropoutRate, 'batchSize': batchSize, 'numOfEpochs':numOfEpochs, 'weight_decay':weight_decay, 'commandRan': commandRan, 'model': modelChosen}
 
 # Run the tests
 for key, value in transformsTested.items():
