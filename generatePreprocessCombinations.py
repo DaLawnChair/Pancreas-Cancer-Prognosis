@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
+# In[44]:
 
 
 # Convert to python script, remember to delete/comment the next line in the actual file
@@ -10,7 +10,7 @@
 
 # ### # Imports
 
-# In[67]:
+# In[1]:
 
 
 # Image reading and file handling 
@@ -74,20 +74,29 @@ from sklearn.metrics import ConfusionMatrixDisplay
 
 # ## Get the data from the .xsxl file
 
-# In[68]:
+# In[40]:
 
 
 columns = ['TAPS_CaseIDs_PreNAT','RECIST_PostNAT', 'Slice_Thickness']
 data = pd.read_excel('PDAC-Response_working.xlsx', header=None,names = columns)
 data.drop(0, inplace=True) # Remove the header row
 data=data.sort_values(by=['TAPS_CaseIDs_PreNAT'])
+data.drop(data[data['Slice_Thickness'] < 6].index, inplace = True)
+
 
 # # Get the entire datasheet
 cases = list(data['TAPS_CaseIDs_PreNAT'])
 recistCriteria = list(data['RECIST_PostNAT'])
 
+sliceThickness = list(data['Slice_Thickness'])
+sliceThickness.sort()
+print(len(sliceThickness))
+sliceThickness
 
-# In[72]:
+
+
+
+# In[12]:
 
 
 #Make the images aligned if not
@@ -168,7 +177,7 @@ def twoImageAlignProceess(wholeHeader,segmentHeader,verbose):
     return wholeHeader, segmentHeader, False
 
 
-# In[73]:
+# In[38]:
 
 
 # Image changing and conversion
@@ -179,7 +188,7 @@ def window_image_to_adbomen(image, window_center, window_width):
     img_min = window_center - int(window_width / 2)
     return np.clip(image, img_min, img_max)
 
-def centerXYOfImage(overlay_mask, segment_mask, segmentedSlices, padding=10, scaledBoxes = None):
+def centerXYOfImage(overlay_mask, segment_mask, segmentedSlices, padding=(5,5), scaledBoxes = None):
     """ 
     Centers the X and Y of the image to crop the image. segmentedSlices is given as an array of z-value slices because the same approach to x_indicies and y_indicies does not work on overlay_segment (works for x and y though)
     """
@@ -199,28 +208,30 @@ def centerXYOfImage(overlay_mask, segment_mask, segmentedSlices, padding=10, sca
         height = scaledBoxes[1]//2
 
     # Get the dimensions of the cropped image
-    start_x = max(0, center_x - width - padding)
-    end_x = min(segment_mask.shape[1], center_x + width + padding)
-    start_y = max(0, center_y - height - padding)
-    end_y = min(segment_mask.shape[2], center_y + height + padding)
+    start_x = max(0, center_x - width - padding[0]//2)
+    end_x = min(segment_mask.shape[1], center_x + width + padding[0]//2)
+    start_y = max(0, center_y - height - padding[1]//2)
+    end_y = min(segment_mask.shape[2], center_y + height + padding[1]//2)
 
     return overlay_mask[np.array(segmentedSlices), start_x:end_x, start_y:end_y]
 
-def convertNdArrayToCV2Image(images, resolution = (64,64)):
+def convertNdArrayToCV2Image(images, resolution = (224,224)):
     """ Converts a numpy array to a cv2 images"""
     # images = images.T
     if resolution == None:
-        resolution = (64,64)#(64,64, len(images))
+        resolution = (224,224)
 
-    images = images.T
+    # images = images.T
     resizedImages = []
+
     print('\nImages Shape:', images.shape)
     print(f"Input array dtype: {images.dtype}")
-    for idx in range(images.shape[-1]):
+    for idx in range(images.shape[0]):
         try:
-            image = images[:,:,idx]
+            image = images[idx,:,:]
             image = image.reshape((image.shape[0],image.shape[1])).astype('float32') #Need to convert to float to resize image
-            resizedImages.append(cv2.resize(image, resolution, interpolation=cv2.INTER_LINEAR).astype('int32')) #Conver the image back to int32 after resizing
+            image = cv2.resize(image, resolution, interpolation=cv2.INTER_LINEAR).astype('int32')
+            resizedImages.append(image) #Conver the image back to int32 after resizing
              
         except cv2.error as e:
             print(f"Error during resizing slice {idx}: {e}")
@@ -230,7 +241,7 @@ def convertNdArrayToCV2Image(images, resolution = (64,64)):
     return resizedImages
 
 
-# In[74]:
+# In[31]:
 
 
 # Displaying segments
@@ -281,7 +292,7 @@ def displayOverlayedSegmentations(segmentedSlices, augmented_whole, augmented_se
     plt.show()
 
 
-# In[75]:
+# In[32]:
 
 
 # Getting optimal slice(s) to use
@@ -387,7 +398,7 @@ def updateSlices(croppedSegment, desiredNumberOfSlices=1):
         return croppedSegment
 
 
-# In[76]:
+# In[26]:
 
 
 # Getting and finding the optimal dimensions for the bounding box
@@ -447,10 +458,13 @@ def findLargestBoxSize(cases):
     return dimensions
 
 
+#print('Largest dimension', findLargestBoxSize(cases))
+
+
 # ## Perform preprocessing on multiple images
 # 
 
-# In[69]:
+# In[36]:
 
 
 def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, scaledBoxes = None):
@@ -497,14 +511,27 @@ def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, sca
     #Segment the whole image with the segment mask
     overlay_segment = augmented_whole * augmented_segment    
  
+    # Get the necessary padding for adding to the cropped image to make it a square
+    paddingDim = (5,5)
+    if scaledBoxes != None:
+        # Rectangle, needs to reshape. Add padding to the smaller of the two dimensions
+        if scaledBoxes[0] != scaledBoxes[1]:
+            difference = abs(scaledBoxes[0] - scaledBoxes[0])
+            if scaledBoxes[0] > scaledBoxes[1]:
+                paddingWidth = difference//2
+                paddingHeight = 0 
+            else:
+                paddingWidth = 0
+                paddingHeight = difference//2
+            paddingDim = paddingDim+(paddingWidth,paddingHeight)
+            
     if useBackground:
-        croppedSegment = centerXYOfImage(augmented_whole,augmented_segment,segmentedSlices, padding=5, scaledBoxes = scaledBoxes) # Crop the image to the center of the segmented region     
+        croppedSegment = centerXYOfImage(augmented_whole,augmented_segment,segmentedSlices, padding=paddingDim, scaledBoxes = scaledBoxes) # Crop the image to the center of the segmented region     
     else:
-        croppedSegment = centerXYOfImage(overlay_segment,augmented_segment,segmentedSlices, padding=5, scaledBoxes = scaledBoxes) # Crop the image to the center of the segmented region     
+        croppedSegment = centerXYOfImage(overlay_segment,augmented_segment,segmentedSlices, padding=paddingDim, scaledBoxes = scaledBoxes) # Crop the image to the center of the segmented region     
 
-    # Resize image if no scaling is given already
-    if scaledBoxes==None:
-        croppedSegment = convertNdArrayToCV2Image(croppedSegment)
+    # Resize image to 224x224
+    croppedSegment = convertNdArrayToCV2Image(croppedSegment)
 
     #Display the results of preprocessing
     if verbose==1 or verbose==2:
@@ -515,7 +542,7 @@ def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, sca
     return whole, croppedSegment, error
 
 
-# In[70]:
+# In[41]:
 
 
 #ADD argparser
@@ -541,7 +568,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     learningRate = 0.001
     hasBackground = False
     usesLargestBox = True
-    segmentsMultiple = 13
+    segmentsMultiple = 12
     dropoutRate = 0.2
 
 else:
@@ -570,7 +597,7 @@ else:
 print(f'BatchSize: {BATCHSIZE}, Epochs: {NUM_EPOCHS}, Learning Rate: {learningRate}, Eval Detail Line: {evalDetailLine}, Has Background: {hasBackground}, Uses Largest Box: {usesLargestBox}, Segments Multiple: {segmentsMultiple}, Dropout Rate: {dropoutRate}')
 
 
-# In[77]:
+# In[42]:
 
 
 allFolders = ['CASE244','CASE246','CASE247','CASE251','CASE254','CASE256','CASE263','CASE264','CASE265','CASE270','CASE272','CASE274',
@@ -581,12 +608,12 @@ allFolders = ['CASE244','CASE246','CASE247','CASE251','CASE254','CASE256','CASE2
 
 onlySeeTheseCases = allFolders#['CASE537','CASE585','CASE587']
 baseFilepath = 'Pre-treatment-only-pres/'
-desiredSliceNumber=13
+desiredSliceNumber=segmentsMultiple
 croppedSegmentsList = []
 groups = []
 
 # Decide to use what size of box, either the largest box size for all images or one that just fits the tumor and resizes
-if usesLargestBox:
+if usesLargestBox: # This is the largest of the whole dataset, including all patients
     dimensions = (82, 109)
     #dimensions = findLargestBoxSize(cases) #Find the largest dimension
 else:
@@ -617,6 +644,7 @@ for folder in sorted(os.listdir(baseFilepath)):
     print(folder, 'All files read:')
     
     whole, croppedSegment,error = preprocess(wholeHeader, preSegmentHeader, verbose=0, useBackground=hasBackground, scaledBoxes=dimensions) 
+
     if error:
         print('Error in preprocessing')
         # continue
@@ -633,6 +661,12 @@ for folder in sorted(os.listdir(baseFilepath)):
     
 
 
+# In[43]:
+
+
+print(np.array(croppedSegmentsList).shape)
+
+
 # In[ ]:
 
 
@@ -647,3 +681,4 @@ def loadFromNumpySave(name):
 
 readingTemp = loadFromNumpySave(name)
 print('readingTemp Shape:', readingTemp.shape)     
+
