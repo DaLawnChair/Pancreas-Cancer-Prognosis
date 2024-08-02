@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[44]:
+# In[23]:
 
 
 # Convert to python script, remember to delete/comment the next line in the actual file
@@ -10,7 +10,7 @@
 
 # ### # Imports
 
-# In[1]:
+# In[9]:
 
 
 # Image reading and file handling 
@@ -25,34 +25,15 @@ import cv2
 
 # import scipy
 
-# Information saving
-import pickle
-
-# Train test set spliting
-from sklearn.model_selection import train_test_split
-
 # Dataset building
 import torch
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 import torchvision.transforms as transforms
 import random
-from sklearn.model_selection import StratifiedKFold
-
-# Model building
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.models as models
-import torch.optim as optim
-
-# Evaluation metrics and Plotting
-import matplotlib.pyplot as plt
-import scipy.stats
-from sklearn.metrics import accuracy_score, f1_score, recall_score
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import ConfusionMatrixDisplay
 
 
-# In[62]:
+
+# In[10]:
 
 
 # ! pip freeze > requirements.txt
@@ -74,7 +55,7 @@ from sklearn.metrics import ConfusionMatrixDisplay
 
 # ## Get the data from the .xsxl file
 
-# In[40]:
+# In[11]:
 
 
 columns = ['TAPS_CaseIDs_PreNAT','RECIST_PostNAT', 'Slice_Thickness']
@@ -93,6 +74,7 @@ sliceThickness.sort()
 print(len(sliceThickness))
 sliceThickness
 
+# print(data[data['Slice_Thickness']==3])
 
 
 
@@ -177,7 +159,7 @@ def twoImageAlignProceess(wholeHeader,segmentHeader,verbose):
     return wholeHeader, segmentHeader, False
 
 
-# In[38]:
+# In[13]:
 
 
 # Image changing and conversion
@@ -241,7 +223,7 @@ def convertNdArrayToCV2Image(images, resolution = (224,224)):
     return resizedImages
 
 
-# In[31]:
+# In[14]:
 
 
 # Displaying segments
@@ -292,7 +274,7 @@ def displayOverlayedSegmentations(segmentedSlices, augmented_whole, augmented_se
     plt.show()
 
 
-# In[32]:
+# In[15]:
 
 
 # Getting optimal slice(s) to use
@@ -398,7 +380,7 @@ def updateSlices(croppedSegment, desiredNumberOfSlices=1):
         return croppedSegment
 
 
-# In[26]:
+# In[16]:
 
 
 # Getting and finding the optimal dimensions for the bounding box
@@ -464,7 +446,7 @@ def findLargestBoxSize(cases):
 # ## Perform preprocessing on multiple images
 # 
 
-# In[36]:
+# In[17]:
 
 
 def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, scaledBoxes = None):
@@ -542,7 +524,7 @@ def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, sca
     return whole, croppedSegment, error
 
 
-# In[41]:
+# In[18]:
 
 
 #ADD argparser
@@ -552,12 +534,12 @@ print('Current System:',sys.argv[0])
 
 # python testSamples22-7.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="" -hasBackground=False -usesGlobalSize=True
 #Current
-#python testSamples23-7.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="no background individual size with dropout 0.2" -hasBackground=t -usesLargestBox=f -segmentsMultiple=1 -dropoutRate=0.2 
+# python testSamples31-7-224x224.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="view with 224x224 majourity voting" -hasBackground=t -usesLargestBox=f -segmentsMultiple=12 -dropoutRate=0.2 
 
-# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="no background individual size with dropout 0.2" -hasBackground=f -usesLargestBox=f -segmentsMultiple=1 -dropoutRate=0.2 &&
-# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="no background individual size with dropout 0.2" -hasBackground=t -usesLargestBox=t -segmentsMultiple=1 -dropoutRate=0.2 &&
-# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="no background individual size with dropout 0.2" -hasBackground=f -usesLargestBox=t -segmentsMultiple=1 -dropoutRate=0.2 &&
-# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="no background individual size with dropout 0.2" -hasBackground=t -usesLargestBox=f -segmentsMultiple=1 -dropoutRate=0.2 
+# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="generate new dataset" -hasBackground=f -usesLargestBox=f -segmentsMultiple=9 -dropoutRate=0.2 &&
+# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="generate new dataset" -hasBackground=t -usesLargestBox=t -segmentsMultiple=9 -dropoutRate=0.2 &&
+# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="generate new dataset" -hasBackground=f -usesLargestBox=t -segmentsMultiple=9 -dropoutRate=0.2 &&
+# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="generate new dataset" -hasBackground=t -usesLargestBox=f -segmentsMultiple=9 -dropoutRate=0.2 
 
 
 #Check if we are using a notebook or not
@@ -567,7 +549,7 @@ if 'ipykernel_launcher' in sys.argv[0]:
     evalDetailLine = ""
     learningRate = 0.001
     hasBackground = False
-    usesLargestBox = True
+    usesLargestBox = False
     segmentsMultiple = 12
     dropoutRate = 0.2
 
@@ -597,7 +579,7 @@ else:
 print(f'BatchSize: {BATCHSIZE}, Epochs: {NUM_EPOCHS}, Learning Rate: {learningRate}, Eval Detail Line: {evalDetailLine}, Has Background: {hasBackground}, Uses Largest Box: {usesLargestBox}, Segments Multiple: {segmentsMultiple}, Dropout Rate: {dropoutRate}')
 
 
-# In[42]:
+# In[19]:
 
 
 allFolders = ['CASE244','CASE246','CASE247','CASE251','CASE254','CASE256','CASE263','CASE264','CASE265','CASE270','CASE272','CASE274',
@@ -661,17 +643,17 @@ for folder in sorted(os.listdir(baseFilepath)):
     
 
 
-# In[43]:
+# In[20]:
 
 
 print(np.array(croppedSegmentsList).shape)
 
 
-# In[ ]:
+# In[22]:
 
 
 #Save the results of the different combinations of backgrounds and sizes
-name = f'/mnt/largedrive1/jzhou/workingDir/preprocessCombinations/hasBackground={hasBackground}-usesLargestBox={usesLargestBox}-segmentsMultiple={segmentsMultiple}'
+name = f'preprocessCombinations/hasBackground={hasBackground}-usesLargestBox={usesLargestBox}-segmentsMultiple={segmentsMultiple}'
 
 np.save(f'{name}.npy',np.array(croppedSegmentsList))
 
