@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[23]:
+# In[27]:
 
 
 # Convert to python script, remember to delete/comment the next line in the actual file
@@ -10,7 +10,7 @@
 
 # ### # Imports
 
-# In[9]:
+# In[5]:
 
 
 # Image reading and file handling 
@@ -18,7 +18,7 @@ import pandas as pd
 import SimpleITK as sitk 
 import os 
 import shutil
-
+from matplotlib import pyplot as plt 
 # Image agumentaitons 
 import numpy as np
 import cv2
@@ -33,7 +33,7 @@ import random
 
 
 
-# In[10]:
+# In[6]:
 
 
 # ! pip freeze > requirements.txt
@@ -55,15 +55,17 @@ import random
 
 # ## Get the data from the .xsxl file
 
-# In[11]:
+# In[7]:
 
 
 columns = ['TAPS_CaseIDs_PreNAT','RECIST_PostNAT', 'Slice_Thickness']
 data = pd.read_excel('PDAC-Response_working.xlsx', header=None,names = columns)
 data.drop(0, inplace=True) # Remove the header row
 data=data.sort_values(by=['TAPS_CaseIDs_PreNAT'])
-data.drop(data[data['Slice_Thickness'] < 6].index, inplace = True)
 
+print(data[data['Slice_Thickness']==6])
+# There is 1 case that is of 3 slice, remainder are of 6-29
+data.drop(data[data['Slice_Thickness'] < 6].index, inplace = True)
 
 # # Get the entire datasheet
 cases = list(data['TAPS_CaseIDs_PreNAT'])
@@ -72,16 +74,18 @@ recistCriteria = list(data['RECIST_PostNAT'])
 sliceThickness = list(data['Slice_Thickness'])
 sliceThickness.sort()
 print(len(sliceThickness))
-sliceThickness
-
-# print(data[data['Slice_Thickness']==3])
 
 
+from collections import Counter
+recistCounter = Counter(recistCriteria)
+print('Distribution of cases based on RECIST criteria',recistCounter)
 
-# In[12]:
 
 
-#Make the images aligned if not
+# In[8]:
+
+
+#Make the images aligned if not. Mainly just checks
 #==========================================================================================
 def makeAlign(image1,image2):
     image1.SetDirection(image2.GetDirection())
@@ -159,7 +163,7 @@ def twoImageAlignProceess(wholeHeader,segmentHeader,verbose):
     return wholeHeader, segmentHeader, False
 
 
-# In[13]:
+# In[9]:
 
 
 # Image changing and conversion
@@ -197,13 +201,8 @@ def centerXYOfImage(overlay_mask, segment_mask, segmentedSlices, padding=(5,5), 
 
     return overlay_mask[np.array(segmentedSlices), start_x:end_x, start_y:end_y]
 
-def convertNdArrayToCV2Image(images, resolution = (224,224)):
-    """ Converts a numpy array to a cv2 images"""
-    # images = images.T
-    if resolution == None:
-        resolution = (224,224)
-
-    # images = images.T
+def resizeImageToDesiredResolution(images, resolution = (224,224)):
+    """ Resize the image to the given resoloution"""
     resizedImages = []
 
     print('\nImages Shape:', images.shape)
@@ -212,7 +211,7 @@ def convertNdArrayToCV2Image(images, resolution = (224,224)):
         try:
             image = images[idx,:,:]
             image = image.reshape((image.shape[0],image.shape[1])).astype('float32') #Need to convert to float to resize image
-            image = cv2.resize(image, resolution, interpolation=cv2.INTER_LINEAR).astype('int32')
+            image = cv2.resize(image, resolution, interpolation=cv2.INTER_CUBIC)
             resizedImages.append(image) #Conver the image back to int32 after resizing
              
         except cv2.error as e:
@@ -223,7 +222,7 @@ def convertNdArrayToCV2Image(images, resolution = (224,224)):
     return resizedImages
 
 
-# In[14]:
+# In[10]:
 
 
 # Displaying segments
@@ -241,7 +240,7 @@ def displayCroppedSegmentations(croppedSegment):
     for idx in range(croppedSegment.shape[0]):        
         if idx%columnLen == 0 and idx>0:
             rowIdx += 1        
-        axis[rowIdx][idx%columnLen].imshow(croppedSegment[idx,:,:] , cmap="gray", vmin = 40-(350)/2, vmax=40+(350)/2)
+        axis[rowIdx][idx%columnLen].imshow(croppedSegment[idx,:,:] , cmap="gray")
         axis[rowIdx][idx%columnLen].axis('off')
 
     # Turn off the axis of the rest of the subplots
@@ -274,41 +273,64 @@ def displayOverlayedSegmentations(segmentedSlices, augmented_whole, augmented_se
     plt.show()
 
 
-# In[15]:
+# In[11]:
 
 
 # Getting optimal slice(s) to use
 #==========================================================================================
 
-def getLargestSlice(croppedSegment):
-    """
-    Finds the index with the largest slice in the croppedSegment and returns the index as well as the sorted number of slices each index has
-    """
-    max = 0
-    maxIndex = 0
+
     
-    indices = []
-    sliceTotals = []
-    for idx in range(croppedSegment.shape[0]):
-        unique, counts = np.unique(croppedSegment[idx,:,:], return_counts=True)
-        values = dict(zip(unique, counts))
-        sliceTotal = 0
-        for value,count in values.items():
-            sliceTotal += count if value > 0 else 0 
+def getLargestSlice(mask):
+ 
+    segmentedSlices = [] 
+    for index in range(mask.shape[0]):
+        if len(np.unique(mask[index,:,:])) > 1:
+            segmentedSlices.append(index)
+
+    mask_areas = []
+    for slice_ in segmentedSlices:
+        mask_areas.append(np.sum(mask[slice_,:,:]))
+
+
+    indices = [i for i in range(len(segmentedSlices))]
+
+    values = dict(zip(mask_areas, indices))
+    values = dict(sorted(values.items()))
+    
+    return list(values.values())[-1], values
+
+    
+
+# def getLargestSlice(croppedSegment):
+#     """
+#     Finds the index with the largest slice in the croppedSegment and returns the index as well as the sorted number of slices each index has
+#     """
+#     max = 0
+#     maxIndex = 0
+    
+#     indices = []
+#     sliceTotals = []
+#     for idx in range(croppedSegment.shape[0]):
+#         unique, counts = np.unique(croppedSegment[idx,:,:], return_counts=True)
+#         values = dict(zip(unique, counts))
+#         sliceTotal = 0
+#         for value,count in values.items():
+#             sliceTotal += count if value > 0 else 0 
         
-        indices.append(idx)
-        sliceTotals.append(sliceTotal)
+#         indices.append(idx)
+#         sliceTotals.append(sliceTotal)
         
-        if sliceTotal > max: 
-            max = sliceTotal
-            maxIndex = idx 
+#         if sliceTotal > max: 
+#             max = sliceTotal
+#             maxIndex = idx 
 
-    values = dict(zip(sliceTotals,indices))
-    values = dict(sorted(values.items())) # Sort the values by number of slices
+#     values = dict(zip(sliceTotals,indices))
+#     values = dict(sorted(values.items())) # Sort the values by number of slices
 
-    return maxIndex, values
+#     return maxIndex, values
 
-def updateSlices(croppedSegment, desiredNumberOfSlices=1):
+def updateSlices(croppedSegment, mask, desiredNumberOfSlices=1):
     """
     Updates the number of slices to the number of slices given. 
     If the numberOfSlices > the number of slices in the croppedSegment, it will duplicate the slices of the largest slices 
@@ -322,7 +344,7 @@ def updateSlices(croppedSegment, desiredNumberOfSlices=1):
 
         # Specifications of croppedSegment
         original = np.copy(croppedSegment)
-        largestSliceIndex, _ = getLargestSlice(croppedSegment)
+        largestSliceIndex, _ = getLargestSlice(mask)
         maxUpperBound = croppedSegment.shape[0] -1
         minLowerBound = 0
         
@@ -367,7 +389,7 @@ def updateSlices(croppedSegment, desiredNumberOfSlices=1):
         return croppedSegment
     else:
         # Specifications of croppedSegment
-        _, sliceValues = getLargestSlice(croppedSegment)
+        _, sliceValues = getLargestSlice(mask)
         numberOfSlicesToRemove =  croppedSegment.shape[0] - desiredNumberOfSlices 
         print(croppedSegment.shape)
         # Remove the slices with the least amount of information
@@ -380,7 +402,7 @@ def updateSlices(croppedSegment, desiredNumberOfSlices=1):
         return croppedSegment
 
 
-# In[16]:
+# In[12]:
 
 
 # Getting and finding the optimal dimensions for the bounding box
@@ -446,10 +468,10 @@ def findLargestBoxSize(cases):
 # ## Perform preprocessing on multiple images
 # 
 
-# In[17]:
+# In[16]:
 
 
-def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, scaledBoxes = None):
+def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, scaledBoxes = None, desiredSliceNumber=12):
     """
     Preprocesses the wholeHeader and segmentHeader sitk images to be ready for augmentation 
     Verbose = 0: No output
@@ -489,10 +511,12 @@ def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, sca
 
     print(f'Segment slice indices:{segmentedSlices}' if verbose==2 else '',end='')
 
+    # Min-Max Normalize the values of the mask so the lower bound of the window is 0.0 and the upper bound is 1.0
+    augmented_whole = (augmented_whole - np.min(augmented_whole)) / (np.max(augmented_whole) - np.min(augmented_whole))
+    overlay_segment = augmented_whole * augmented_segment
 
-    #Segment the whole image with the segment mask
-    overlay_segment = augmented_whole * augmented_segment    
- 
+    
+
     # Get the necessary padding for adding to the cropped image to make it a square
     paddingDim = (5,5)
     if scaledBoxes != None:
@@ -506,14 +530,22 @@ def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, sca
                 paddingWidth = 0
                 paddingHeight = difference//2
             paddingDim = paddingDim+(paddingWidth,paddingHeight)
-            
+    
+    # Crop the image to the center of the segmented region
     if useBackground:
-        croppedSegment = centerXYOfImage(augmented_whole,augmented_segment,segmentedSlices, padding=paddingDim, scaledBoxes = scaledBoxes) # Crop the image to the center of the segmented region     
+        croppedSegment = centerXYOfImage(augmented_whole,augmented_segment,segmentedSlices, padding=paddingDim, scaledBoxes = scaledBoxes) 
     else:
-        croppedSegment = centerXYOfImage(overlay_segment,augmented_segment,segmentedSlices, padding=paddingDim, scaledBoxes = scaledBoxes) # Crop the image to the center of the segmented region     
+        croppedSegment = centerXYOfImage(overlay_segment,augmented_segment,segmentedSlices, padding=paddingDim, scaledBoxes = scaledBoxes)      
 
     # Resize image to 224x224
-    croppedSegment = convertNdArrayToCV2Image(croppedSegment)
+    croppedSegment = resizeImageToDesiredResolution(croppedSegment)
+
+
+    if desiredSliceNumber==1:
+        largestSlice, _ = getLargestSlice(augmented_segment)
+        croppedSegment = croppedSegment[largestSlice,:,:]
+    else:
+        croppedSegment = updateSlices(croppedSegment,augmented_segment,desiredSliceNumber)
 
     #Display the results of preprocessing
     if verbose==1 or verbose==2:
@@ -524,7 +556,7 @@ def preprocess(wholeHeader, segmentHeader, verbose=0, useBackground = False, sca
     return whole, croppedSegment, error
 
 
-# In[18]:
+# In[14]:
 
 
 #ADD argparser
@@ -536,131 +568,125 @@ print('Current System:',sys.argv[0])
 #Current
 # python testSamples31-7-224x224.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="view with 224x224 majourity voting" -hasBackground=t -usesLargestBox=f -segmentsMultiple=12 -dropoutRate=0.2 
 
-# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="generate new dataset" -hasBackground=f -usesLargestBox=f -segmentsMultiple=9 -dropoutRate=0.2 &&
-# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="generate new dataset" -hasBackground=t -usesLargestBox=t -segmentsMultiple=9 -dropoutRate=0.2 &&
-# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="generate new dataset" -hasBackground=f -usesLargestBox=t -segmentsMultiple=9 -dropoutRate=0.2 &&
-# python generatePreprocessCombinations.py -batchSize=8 -epochs=100 -lr=0.001 -evalDetailLine="generate new dataset" -hasBackground=t -usesLargestBox=f -segmentsMultiple=9 -dropoutRate=0.2 
+# python generatePreprocessCombinations.py -hasBackground=f -usesLargestBox=f -segmentsMultiple=12 &&
+# python generatePreprocessCombinations.py -hasBackground=t -usesLargestBox=t -segmentsMultiple=12 &&
+# python generatePreprocessCombinations.py -hasBackground=f -usesLargestBox=t -segmentsMultiple=12 &&
+# python generatePreprocessCombinations.py -hasBackground=t -usesLargestBox=f -segmentsMultiple=12 
 
 
 #Check if we are using a notebook or not
 if 'ipykernel_launcher' in sys.argv[0]:
-    BATCHSIZE = 8
-    NUM_EPOCHS = 100
-    evalDetailLine = ""
-    learningRate = 0.001
     hasBackground = False
-    usesLargestBox = False
+    usesLargestBox = True
     segmentsMultiple = 12
-    dropoutRate = 0.2
+
 
 else:
     parser = argparse.ArgumentParser(description="Model information")
-    parser.add_argument('-batchSize', type=int, help='batch size', default=8)
-    parser.add_argument('-epochs', type=int, help='Number of Epochs', default=100)
-    parser.add_argument('-lr', type=float, help='Learning Rate', default=0.001)
-    parser.add_argument('-evalDetailLine', type=str, help='Details of the evaluation', default='')
     parser.add_argument('-hasBackground', type=str, help='Whether to use the background (t to, f to not)', default='f')
     parser.add_argument('-usesLargestBox', type=str, help='Where to use the size of the largest box (t) or independent tumor boxes (f)', default='t')
-    parser.add_argument('-segmentsMultiple', type=int, help='Segments a # of slices, 13 by default', default=13)
-    parser.add_argument('-dropoutRate', type=float, help='Dropout rate for the model', default=0.2)
+    parser.add_argument('-segmentsMultiple', type=int, help='Segments a # of slices, 12 by default', default=12)
     
     args = parser.parse_args()
-    
-    BATCHSIZE = args.batchSize
-    NUM_EPOCHS = args.epochs
-    evalDetailLine = args.evalDetailLine
-    learningRate = args.lr
     hasBackground = True if args.hasBackground=='t' else False
     usesLargestBox = True if args.usesLargestBox=='t' else False
     segmentsMultiple = args.segmentsMultiple
-    dropoutRate = args.dropoutRate
 
 
-print(f'BatchSize: {BATCHSIZE}, Epochs: {NUM_EPOCHS}, Learning Rate: {learningRate}, Eval Detail Line: {evalDetailLine}, Has Background: {hasBackground}, Uses Largest Box: {usesLargestBox}, Segments Multiple: {segmentsMultiple}, Dropout Rate: {dropoutRate}')
+
+print(f'Has Background: {hasBackground}, Uses Largest Box: {usesLargestBox}, Segments Multiple: {segmentsMultiple}')
 
 
-# In[19]:
+# In[24]:
 
 
-allFolders = ['CASE244','CASE246','CASE247','CASE251','CASE254','CASE256','CASE263','CASE264','CASE265','CASE270','CASE272','CASE274',
-                'CASE467','CASE468','CASE470','CASE471','CASE472','CASE476','CASE479','CASE480','CASE482','CASE484','CASE485','CASE488','CASE494','CASE496','CASE499',
-                'CASE500','CASE505','CASE515','CASE520','CASE523','CASE525','CASE531','CASE533','CASE534','CASE535','CASE537','CASE539','CASE541','CASE543','CASE546','CASE547','CASE548','CASE549','CASE550','CASE551','CASE554','CASE555','CASE557','CASE559','CASE560','CASE562','CASE563','CASE564','CASE565','CASE568','CASE569','CASE572','CASE574','CASE575','CASE577','CASE578','CASE580','CASE581','CASE585','CASE586','CASE587','CASE588','CASE589','CASE593','CASE594','CASE596','CASE598',
-                'CASE600','CASE601','CASE602','CASE603','CASE604','CASE605','CASE608','CASE610','CASE611','CASE615','CASE616','CASE621','CASE622','CASE623','CASE624','CASE629','CASE630','CASE632','CASE635']
+def generatePreprocessCombinations(hasBackground, usesLargestBox, segmentsMultiple):
+    allFolders = ['CASE244','CASE246','CASE247','CASE251','CASE254','CASE256','CASE263','CASE264','CASE265','CASE270','CASE272','CASE274',
+                    'CASE467','CASE468','CASE470','CASE471','CASE472','CASE476','CASE479','CASE480','CASE482','CASE484','CASE485','CASE488','CASE494','CASE496','CASE499',
+                    'CASE500','CASE505','CASE515','CASE520','CASE523','CASE525','CASE531','CASE533','CASE534','CASE535','CASE537','CASE539','CASE541','CASE543','CASE546','CASE547','CASE548','CASE549','CASE550','CASE551','CASE554','CASE555','CASE557','CASE559','CASE560','CASE562','CASE563','CASE564','CASE565','CASE568','CASE569','CASE572','CASE574','CASE575','CASE577','CASE578','CASE580','CASE581','CASE585','CASE586','CASE587','CASE588','CASE589','CASE593','CASE594','CASE596','CASE598',
+                    'CASE600','CASE601','CASE602','CASE603','CASE604','CASE605','CASE608','CASE610','CASE611','CASE615','CASE616','CASE621','CASE622','CASE623','CASE624','CASE629','CASE630','CASE632','CASE635']
 
 
-onlySeeTheseCases = allFolders#['CASE537','CASE585','CASE587']
-baseFilepath = 'Pre-treatment-only-pres/'
-desiredSliceNumber=segmentsMultiple
-croppedSegmentsList = []
-groups = []
+    onlySeeTheseCases = allFolders#['CASE537','CASE585','CASE587']
+    baseFilepath = 'Pre-treatment-only-pres/'
+    desiredSliceNumber=segmentsMultiple
+    croppedSegmentsList = []
+    groups = []
 
-# Decide to use what size of box, either the largest box size for all images or one that just fits the tumor and resizes
-if usesLargestBox: # This is the largest of the whole dataset, including all patients
-    dimensions = (82, 109)
-    #dimensions = findLargestBoxSize(cases) #Find the largest dimension
-else:
-    dimensions = None
-print('Using box dimension of:',dimensions)
-
-
-# Get all cropped segments
-for folder in sorted(os.listdir(baseFilepath)):
-    # Skip cases that are not in the excel sheet
-    if folder not in cases:
-        continue
-    # Exclude to cases that we haven't seen yet
-    if folder not in onlySeeTheseCases:
-        continue 
-    count = 0
-    preSegmentHeader = None
-    wholeHeader = None
-    for file in os.listdir(os.path.join(baseFilepath,folder)):
-            
-        if 'TUM' in file or 'SMV' in file: # pre-treatment segmentation 
-            # segment, segmentHeader = nrrd.read(os.path.join(baseFilepath,folder,file))
-            preSegmentHeader = sitk.ReadImage(os.path.join(baseFilepath,folder,file))
-        elif file.endswith('CT.nrrd'): # whole ct scan
-            wholeHeader = sitk.ReadImage(os.path.join(baseFilepath,folder,file))
-    
-    print('==============================================================')
-    print(folder, 'All files read:')
-    
-    whole, croppedSegment,error = preprocess(wholeHeader, preSegmentHeader, verbose=0, useBackground=hasBackground, scaledBoxes=dimensions) 
-
-    if error:
-        print('Error in preprocessing')
-        # continue
-    
-    # groups += [folder]*desiredSliceNumber # Add the segment slices to the group
-    
-    if segmentsMultiple==1:
-        largestSlice,_ = getLargestSlice(croppedSegment)
-        updatedCroppedSegment = croppedSegment[largestSlice,:,:]
+    # Decide to use what size of box, either the largest box size for all images or one that just fits the tumor and resizes
+    if usesLargestBox: # This is the largest of the whole dataset, including all patients
+        dimensions = (82, 109)
+        #dimensions = findLargestBoxSize(cases) #Find the largest dimension
     else:
-        updatedCroppedSegment = updateSlices(croppedSegment,desiredSliceNumber)
+        dimensions = None
+    print('Using box dimension of:',dimensions)
+
+
+    # Get all cropped segments
+    for folder in sorted(os.listdir(baseFilepath)):
+        # Skip cases that are not in the excel sheet
+        if folder not in cases:
+            continue
+        # Exclude to cases that we haven't seen yet
+        if folder not in onlySeeTheseCases:
+            continue 
+        count = 0
+        preSegmentHeader = None
+        wholeHeader = None
+        for file in os.listdir(os.path.join(baseFilepath,folder)):
+                
+            if 'TUM' in file or 'SMV' in file: # pre-treatment segmentation 
+                # segment, segmentHeader = nrrd.read(os.path.join(baseFilepath,folder,file))
+                preSegmentHeader = sitk.ReadImage(os.path.join(baseFilepath,folder,file))
+            elif file.endswith('CT.nrrd'): # whole ct scan
+                wholeHeader = sitk.ReadImage(os.path.join(baseFilepath,folder,file))
         
-    croppedSegmentsList.append(updatedCroppedSegment)
-    
+        print('==============================================================')
+        print(folder, 'All files read:')
+        
+        whole, croppedSegment,error = preprocess(wholeHeader, preSegmentHeader, verbose=0, useBackground=hasBackground, scaledBoxes=dimensions, desiredSliceNumber=segmentsMultiple) 
+        if error:
+            print('Error in preprocessing')
+            # continue
+        
+        print('Final Shape', croppedSegment.shape)
+        # groups += [folder]*desiredSliceNumber # Add the segment slices to the group
+            
+        croppedSegmentsList.append(croppedSegment)
+        
+    print(np.array(croppedSegmentsList).shape)
+    #Save the results of the different combinations of backgrounds and sizes
+    name = f'preprocessCombinations/hasBackground={hasBackground}-usesLargestBox={usesLargestBox}-segmentsMultiple={segmentsMultiple}'
+
+    np.save(f'{name}.npy',np.array(croppedSegmentsList))
+
+    def loadFromNumpySave(name):
+        data = np.load(f'{name}.npy')
+        return data
+
+    readingTemp = loadFromNumpySave(name)
+    print('readingTemp Shape:', readingTemp.shape)     
 
 
-# In[20]:
+generatePreprocessCombinations(hasBackground, usesLargestBox, segmentsMultiple)
+# generatePreprocessCombinations(True, True, segmentsMultiple)
+# generatePreprocessCombinations(False, False, segmentsMultiple)
+# generatePreprocessCombinations(True, False, segmentsMultiple)
+# generatePreprocessCombinations(False, True, segmentsMultiple)
 
 
-print(np.array(croppedSegmentsList).shape)
+# In[26]:
 
 
-# In[22]:
-
-
-#Save the results of the different combinations of backgrounds and sizes
 name = f'preprocessCombinations/hasBackground={hasBackground}-usesLargestBox={usesLargestBox}-segmentsMultiple={segmentsMultiple}'
+# name = f'preprocessCombinations/hasBackground=True-usesLargestBox=False-segmentsMultiple=6'
 
-np.save(f'{name}.npy',np.array(croppedSegmentsList))
-
+# np.save(f'{name}.npy',np.array(croppedSegmentsList))
+    
 def loadFromNumpySave(name):
     data = np.load(f'{name}.npy')
     return data
 
 readingTemp = loadFromNumpySave(name)
-print('readingTemp Shape:', readingTemp.shape)     
+print('readingTemp Shape:', readingTemp.shape)   
 
