@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[48]:
+# In[55]:
 
 
 # # Convert to python script, remember to delete/comment the next line in the actual file
-#  ! jupyter nbconvert --to python imageSegmentation2Classes.ipynb --output testSamples4-8-undersampled.py
+# ! jupyter nbconvert --to python imageSegmentation2Classes.ipynb --output testSamples4-8-undersampled.py
 
 # # Run the notebook in Simpson GPU server
 # CUDA_VISIBLE_DEVICES=0 python testSamples2-8.py -batchSize=16 -epochs=100 -lr=0.001 -evalDetailLine="majourity voting on smote with 2 clases" -hasBackground=f -usesLargestBox=f -segmentsMultiple=12 -dropoutRate=0.2 -grouped2D=t -modelChosen='Small2D' -votingSystem='majority'
@@ -50,6 +50,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 import torch.optim as optim
+from torch.optim import lr_scheduler
+
+import timm # For Xception model
 
 # Evaluation metrics and Plotting
 import matplotlib.pyplot as plt
@@ -265,9 +268,9 @@ print(f'BatchSize: {batchSize}, Epochs: {numOfEpochs}, Learning Rate: {learningR
 
 
 #Get a saved copy of the dataset
-name = f'hasBackground={hasBackground}-usesLargestBox={usesLargestBox}-segmentsMultiple={segmentsMultiple}'        
+name = f'hasBackground={hasBackground}-usesLargestBox={usesLargestBox}-segmentsMultiple={segmentsMultiple}-size=(119,119)' #-size=(299,299)        
 # name = f'hasBackground=True-usesLargestBox=False-segmentsMultiple=1'
-croppedSegmentsList = np.load(f'preprocessCombinations/{name}.npy')
+croppedSegmentsList = np.load(f'preprocessCombinations/{name}.npy') #f'preprocessCombinations/224x224/{name}.npy'
     
 print('croppedSegmentsList Shape:', croppedSegmentsList.shape)   
 print('Single item Shape:', croppedSegmentsList[0].shape)   
@@ -295,14 +298,17 @@ print('Single item Shape:', croppedSegmentsList[0].shape)
 def generateTransform(RandomHorizontalFlipValue=0.5,RandomVerticalFlipValue=0.5, RandomRotationValue=50, RandomElaticTransform=[0,0], brightnessConstant=0, contrastConstant=0, kernelSize=3, sigmaRange=(0.1,1.0)):
     training_data_transforms = transforms.Compose([
         #transforms.ToPILImage(),
+        transforms.Resize(299),
+        transforms.CenterCrop(299),
         transforms.ToTensor(),
-        transforms.RandomRotation(degrees=RandomRotationValue),
-        transforms.ElasticTransform(alpha=RandomElaticTransform[0], sigma=RandomElaticTransform[1]),
-        transforms.ColorJitter(brightnessConstant, contrastConstant),
-        transforms.GaussianBlur(kernel_size = kernelSize, sigma=sigmaRange),
         transforms.RandomHorizontalFlip(p=RandomHorizontalFlipValue),
         transforms.RandomVerticalFlip(p=RandomVerticalFlipValue),
-        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5])
+        #transforms.RandomRotation(degrees=RandomRotationValue),
+        #transforms.ElasticTransform(alpha=RandomElaticTransform[0], sigma=RandomElaticTransform[1]),
+        #transforms.ColorJitter(brightnessConstant, contrastConstant),
+        #transforms.GaussianBlur(kernel_size = kernelSize, sigma=sigmaRange),
+
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ]) 
     return training_data_transforms
 
@@ -366,12 +372,15 @@ def convertDataToLoaders(xTrain, yTrain, xVal, yVal, xTest, yTest, training_data
     # Testing data tranfrom, should be just the plain images
     testing_data_transforms = transforms.Compose([
         #transforms.ToPILImage(),
+        transforms.Resize(299),
+        transforms.CenterCrop(299),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5])
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ]) 
 
     # Use the same default training transform as the testing transform if not specified
     if training_data_transforms == None:
+        print('Training transform is None, using default transforms')
         training_data_transforms = testing_data_transforms
         
     # Convert the testing sets to data loaders
@@ -472,85 +481,29 @@ class Small2D(torch.nn.Module):
         super(Small2D, self).__init__()
 
         #Resnet50 as first layer
-        self.resNet50 = models.resnet50(weights='IMAGENET1K_V2')
+        self.model = models.inception_v3(pretrained=True)
         # self.resNet50 = models.resnet50(pretrained=True)
 
         # Modify the first convolutional layer to accept single-channel input
         # self.resNet50.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=0, bias=True)
 
         # Freeze all layers of the resNet
-        for param in self.resNet50.parameters():
-            param.requires_grad = False
-                
+        #for param in self.resNet50.parameters():
+        #    param.requires_grad = False
+        
+        
         # Modify the final fully connected layer
-        num_features = self.resNet50.fc.out_features
-        self.fc = nn.Linear(num_features, 1)
+        num_features = self.model.fc.in_features
+        self.model.fc = nn.Linear(num_features, 1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        x = self.resNet50(x)
-        x = self.fc(x)
+        if self.model.training:
+          x = self.model(x)[0]#.unsqueeze(1)
+        else:
+          x = self.model(x)
         x = self.sigmoid(x)
         return x 
-    
-class Large2D(torch.nn.Module):
-    def __init__(self, dropoutRate=0.2):
-        super(Large2D, self).__init__()
-
-        #Resnet50 as first layer
-        self.resNet50 = models.resnet50(weights='IMAGENET1K_V2')
-        # self.resNet50 = models.resnet50(pretrained=True)
-
-        # Modify the first convolutional layer to accept single-channel input
-        # self.resNet50.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=0, bias=True)
-
-        # Freeze all layers of the resNet
-        for param in self.resNet50.parameters():
-            param.requires_grad = False
-                
-        # Hidden layers with batchnorms
-        self.batchNormalization0 = nn.BatchNorm1d(self.resNet50.fc.out_features)
-        self.hiddenLayer1 = nn.Linear(self.resNet50.fc.out_features, 528)
-        self.batchNormalization1 = nn.BatchNorm1d(528)
-        self.hiddenLayer2 = nn.Linear(528, 128)
-        self.batchNormalization2 = nn.BatchNorm1d(128)
-        self.hiddenLayer3 = nn.Linear(128, 64)
-        self.batchNormalization3 = nn.BatchNorm1d(64)
-
-        # Output layer
-        self.outputLayer = nn.Linear(64, 1)
-        self.sigmoid = nn.Sigmoid()
-
-        #Other layers
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(dropoutRate)
-
-    def forward(self, x):
-        # Into ResNet
-        x = self.resNet50(x)
-        x = self.batchNormalization0(x) if x.size(dim=0)>1 else x
-        x = self.relu(x)
-        x = self.dropout(x)
-        # Into hidden layer1
-        x = self.hiddenLayer1(x) 
-        x = self.batchNormalization1(x) if x.size(dim=0)>1 else x
-        x = self.relu(x)
-        x = self.dropout(x)
-        # Into hidden layer2
-        x = self.hiddenLayer2(x)
-        x = self.batchNormalization2(x) if x.size(dim=0)>1 else x
-        x = self.relu(x)
-        x = self.dropout(x)
-        # Into hidden layer3
-        x = self.hiddenLayer3(x)
-        x = self.batchNormalization3(x) if x.size(dim=0)>1 else x
-        x = self.relu(x)
-        x = self.dropout(x)
-        # Output layer  
-        x = self.outputLayer(x)
-        x = self.sigmoid(x)
-        return x
-
     
 def defineModel(dropoutRate=0.2,learningRate=0.001, weight_decay=0.01, model = 'Small2D'):
     if model == 'Small2D':
@@ -563,77 +516,13 @@ def defineModel(dropoutRate=0.2,learningRate=0.001, weight_decay=0.01, model = '
     # criterion = nn.CrossEntropyLoss()
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.AdamW(model.parameters(), lr=learningRate, weight_decay=weight_decay)
-
-    return model, criterion, optimizer
+    scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+    return model, criterion, scheduler, optimizer
 
 
 # In[17]:
 
-
-# from fmcib.models import fmcib_model
-
-class SmallFoundation(torch.nn.Module):
-    def __init__(self, dropoutRate=0.2):
-        super(SmallFoundation, self).__init__()
-
-        # Foundation model as first layer
-        self.foundationModel = fmcib_model()
-        
-        # Modify the first convolutional layer to accept single-channel input
-        self.foundationModel.trunk.conv1 = nn.Conv3d(1, 128, kernel_size=(7, 7, 7), stride=(2, 2, 2), padding=(3, 3, 3), bias=False)
-        
-        # Freeze all layers of the foundation model
-        for param in self.foundationModel.parameters():
-            param.requires_grad = False
-                
-        # Hidden layers with batchnorms
-        self.batchNormalization0 = nn.BatchNorm1d(self.foundationModel.fc.out_features)
-        self.hiddenLayer1 = nn.Linear(self.foundationModel.fc.out_features, 528)
-        self.batchNormalization1 = nn.BatchNorm1d(528)
-        self.hiddenLayer2 = nn.Linear(528, 128)
-        self.batchNormalization2 = nn.BatchNorm1d(128)
-        self.hiddenLayer3 = nn.Linear(128, 64)
-        self.batchNormalization3 = nn.BatchNorm1d(64)
-
-        # Output layer
-        self.outputLayer = nn.Linear(64, 3)
-        self.softmax = nn.Softmax()
-
-        #Other layers
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(dropoutRate)
-
-#     def forward(self, x):
-#         # Into foundation model
-#         x = self.foundationModel(x)
-#         x = self.batchNormalization0(x) if x.size(dim=0)>1 else x
-#         x = self.relu(x)
-#         x = self.dropout(x)
-#         # Into hidden layer1
-#         x = self.hiddenLayer1(x) 
-#         x = self.batchNormalization1(x) if x.size(dim=0)>1 else x
-#         x = self.relu(x)
-#         x = self.dropout(x)
-#         # Into hidden layer2
-#         x = self.hiddenLayer2(x)
-#         x = self.batchNormalization2(x) if x.size(dim=0)>1 else x
-#         x = self.relu(x)
-#         x = self.dropout(x)
-#         # Into hidden layer3
-#         x = self.hiddenLayer3(x)
-#         x = self.batchNormalization3(x) if x.size(dim=0)>1 else x
-#         x = self.relu(x)
-#         x = self.dropout(x)
-#         # Output layer
-#         x = self.outputLayer(x)
-#         x = self.softmax(x)
-#         return x
-
-
-# In[18]:
-
-
-def train(model, loader, criterion, optimizer, device):
+def train(model, loader, criterion, scheduler, optimizer, device):
     model.train()
     running_loss = 0.0
     correct = 0
@@ -654,6 +543,8 @@ def train(model, loader, criterion, optimizer, device):
         total += labels.size(0)
         running_loss += loss.item() * inputs.size(0)
         correct += torch.sum(predicted == labels.data).item()
+        
+    scheduler.step()
     
     epoch_loss = running_loss / total
     epoch_acc = correct / total
@@ -674,7 +565,7 @@ class EarlyStopping:
         if currValLoss < self.minValLoss:
             self.minValLoss = currValLoss
             self.counter = 0
-        elif currValLoss > self.minValLoss + self.minDelta:
+        elif currValLoss >= self.minValLoss + self.minDelta:
             self.counter += 1
             if self.counter >= self.patience:
                 return True
@@ -769,19 +660,20 @@ def evaluate(model, loader, criterion, device):
 # In[19]:
 
 
-def trainModel(model, criterion, optimizer, trainingData, validationData, numOfEpochs=100):
+def trainModel(model, criterion, scheduler, optimizer, trainingData, validationData, numOfEpochs=100):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Using this device:', device)
     #Send the model to the same device that the tensors are on
     model.to(device)
 
-    earlyStopping = EarlyStopping(patience=10, minDelta=0)
+    
+    earlyStopping = EarlyStopping(patience=5, minDelta=0)
     train_loss, train_acc = [], []
     val_loss, val_acc = [], []
 
     for epoch in range(numOfEpochs):
         #Train model
-        curTrainLoss, curTrainAcc = train(model, trainingData, criterion, optimizer, device)    
+        curTrainLoss, curTrainAcc = train(model, trainingData, criterion, scheduler, optimizer, device)
         print(f"Epoch {epoch+1}/{numOfEpochs}")
         print(f"Train Loss: {curTrainLoss:.4f}, Train Acc: {curTrainAcc:.4f}")
         #Evaluate on validation set
@@ -1091,13 +983,14 @@ def averageMultilabelMetricScores(scores, numberOfTrials=5, numberOfClasses=2):
 #Runs all model evaluations steps
 def runModelFullStack(testPathName, testName, xTrain, yTrain, xVal, yVal, xTest, yTest, modelInformation, trainingTransform=None):
     trainingData, validationData, testingData, training_data_transforms = convertDataToLoaders(xTrain, yTrain, xVal, yVal, xTest, yTest, training_data_transforms = trainingTransform, batchSize=modelInformation['batchSize'])
-    model, criterion, optimizer = defineModel(dropoutRate=modelInformation['dropoutRate'], learningRate = modelInformation['learningRate'], weight_decay=modelInformation['weight_decay'], model = modelInformation['model'])
-    model, criterion, device, history, endingEpoch = trainModel(model, criterion, optimizer, trainingData,validationData, numOfEpochs=modelInformation['numOfEpochs'])
+    model, criterion, scheduler, optimizer = defineModel(dropoutRate=modelInformation['dropoutRate'], learningRate = modelInformation['learningRate'], weight_decay=modelInformation['weight_decay'], model = modelInformation['model'])
+    model, criterion, device, history, endingEpoch = trainModel(model, criterion, scheduler, optimizer, trainingData,validationData, numOfEpochs=modelInformation['numOfEpochs'])
     saveResults(testPathName, model, history, training_data_transforms, saveModel=False)
     confusionMatrix, accuracy, f1, recall, predictsTotal = evaluateModelOnTestSet(testPathName, model, testingData, criterion, device, saveConfusionMatrix = True, showConfusionMatrix=False)
     #plotTraining(testPathName, testName, history, saveFigure=True, showResult=True)
 
     return confusionMatrix, history, accuracy, f1, recall, predictsTotal, endingEpoch+1
+
 
 
 # In[43]:
@@ -1192,29 +1085,29 @@ def generateKFoldsValidation(identifier,identifierValue, modelInformation, group
         yTest = np.array(yTest)
 
         ## ==============================================================
-        ## Using SMOTE
-        # smote = SMOTE(random_state=42)
-        # if len(xTrain.shape)==3:
-        #     oneDShape = xTrain[0].shape[0]*xTrain[0].shape[1]
-            
-        # else:
-        #     print('xTrain shape',xTrain.shape)
-        #     oneDShape = xTrain[0].shape[0]*xTrain[0].shape[1]*xTrain[0].shape[2]
+        # Using SMOTE
+        #smote = SMOTE(random_state=42)
+        #if len(xTrain.shape)==3:
+        #    oneDShape = xTrain[0].shape[0]*xTrain[0].shape[1]
+        #    
+        #else:
+        #    print('xTrain shape',xTrain.shape)
+        #    oneDShape = xTrain[0].shape[0]*xTrain[0].shape[1]*xTrain[0].shape[2]
 
-        # singleShape = xTrain[0].shape
+        #singleShape = xTrain[0].shape
 
-        # print('xTrain reshape',xTrain.reshape(xTrain.shape[0],oneDShape).shape)
-        # xTrainSmote, yTrain = smote.fit_resample(xTrain.reshape(xTrain.shape[0],oneDShape), yTrain)
-        # if len(xTrain.shape)==3:
-        #     xTrain = xTrainSmote.reshape(xTrainSmote.shape[0], xTrain[0].shape[0],xTrain[0].shape[1])
-        # else:
-        #     xTrain = xTrainSmote.reshape(xTrainSmote.shape[0], xTrain[0].shape[0],xTrain[0].shape[1],xTrain[0].shape[2])
+        #print('xTrain reshape',xTrain.reshape(xTrain.shape[0],oneDShape).shape)
+        #xTrainSmote, yTrain = smote.fit_resample(xTrain.reshape(xTrain.shape[0],oneDShape), yTrain)
+        #if len(xTrain.shape)==3:
+        #    xTrain = xTrainSmote.reshape(xTrainSmote.shape[0], xTrain[0].shape[0],xTrain[0].shape[1])
+        #else:
+        #    xTrain = xTrainSmote.reshape(xTrainSmote.shape[0], xTrain[0].shape[0],xTrain[0].shape[1],xTrain[0].shape[2])
 
-        # print('xTrain after Smote', xTrain.shape)
-        # print('yTrain after Smote', yTrain.shape)
-        # from collections import Counter
-        # counter  = Counter(yTest)
-        # print('Splits for test Fold',sorted(counter.items()))
+        #print('xTrain after Smote', xTrain.shape)
+        #print('yTrain after Smote', yTrain.shape)
+        #from collections import Counter
+        #counter  = Counter(yTest)
+        #print('Splits for test Fold',sorted(counter.items()))
 
         ## ==============================================================
         
@@ -1305,6 +1198,7 @@ transformsTested = {
     # "60":generateTransform(RandomRotationValue=60, RandomElaticTransform=[60,6], brightnessConstant=60, contrastConstant=60, kernelSize=3, sigmaRange=(0.001,1.2)),
     # "80":generateTransform(RandomRotationValue=80, RandomElaticTransform=[80,8], brightnessConstant=80, contrastConstant=80, kernelSize=3, sigmaRange=(0.001,1.6)),
     # "100":generateTransform(RandomRotationValue=100, RandomElaticTransform=[100,10], brightnessConstant=100, contrastConstant=100, kernelSize=3, sigmaRange=(0.001,2.0))    
+    #"flips":generateTransform(RandomRotationValue=50, RandomElaticTransform=[100,10], brightnessConstant=100, contrastConstant=100, kernelSize=3, sigmaRange=(0.001,2.0))
 }
 
 ## Open the dataframe and add the evaluation details

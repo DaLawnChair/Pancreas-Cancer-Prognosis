@@ -1,11 +1,12 @@
 Current progress:
-* Added code to undersample the larger class in the generate k folds function. Note you should comment either the undersampler code or the SMOTE code
-* Made the block where we first get the recistCriteria convert the labels into the versions we want.
-* Added argumements to the generate k folds function as for some reason, requesting variables through print statements gives a undefined local variable error but calling it in stratifiedkFolds() doesn't
-* Added argparse value for singleLargest, which adds confirmation that you want to do only the singleLargest datapoints. (ie with segmentsMultiple=1 and grouped2D=f). Added supporting code that uses it instead of grouped2d sometimes.
+* Added code to add a lr scheduler
+* Made the model an inceptionv3 model, since the performance is much better thant eh original
+* Reorganizing files
+* Added all scripts that were used on the server for the tests
+
 
 Need to do [current]:
-* Evaluate SMOTE performance
+* Refractor code
 * Evaluate undersampling performance
 * Analyze and choose which features are important to the underlying goal, predicting progression through RECIST_PostNAC category
 For model testing:
