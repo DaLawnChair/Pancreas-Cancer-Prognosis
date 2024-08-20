@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[7]:
+# In[2]:
 
 
 # ! jupyter nbconvert --to python twoClassClassificationMethods.ipynb --output twoClassClassificationMethods.py
@@ -306,8 +306,14 @@ def convertDataToLoaders(trainPatientList, valPatientList,testPatientList, allDa
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]) 
-    
 
+    elif model == 'XceptionSmall2D':
+        testing_data_transforms = transforms.Compose([
+            transforms.Resize(299),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5])
+        ]) 
+        
     # Use the same default training transform as the testing transform if not specified
     if training_data_transforms == None:
         training_data_transforms = testing_data_transforms
@@ -349,25 +355,21 @@ class InceptionV3Small2D(torch.nn.Module):
           x = self.model(x)
         x = self.sigmoid(x)
         return x 
-
-
-class ResNet50Small2D(torch.nn.Module):
+        
+class XceptionSmall2D(torch.nn.Module):
     def __init__(self):
-        super(ResNet50Small2D, self).__init__()
+        super(XceptionSmall2D, self).__init__()
 
         # Resnet50 as first layer
-        self.model = models.resnet50(weights='IMAGENET1K_V2')
-
-        # Modify the final fully connected layer
-        num_features = self.model.fc.in_features
-        self.model.fc = nn.Linear(num_features, 1)
+        self.model = timm.create_model('xception', pretrained=True, num_classes=1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = self.model(x)
         x = self.sigmoid(x)
         return x 
-    
+
+
 class VGG16Small2D(torch.nn.Module):
     def __init__(self):
         super(VGG16Small2D, self).__init__()
@@ -403,14 +405,16 @@ class ResNet50Small2D(torch.nn.Module):
         x = self.sigmoid(x)
         return x 
     
-def defineModel(learningRate=0.001, weight_decay=0.01, model = 'Small2D'):
+def defineModel(learningRate=0.001, weight_decay=0.01, model = 'ResNet50Small2D'):
     if model == 'ResNet50Small2D':
         model = ResNet50Small2D()
     elif model == 'VGG16Small2D':
         model = VGG16Small2D()
     elif model == 'InceptionV3Small2D':
-        model = VGG16Small2D()
-    
+        model = InceptionV3Small2D()
+    elif model == 'XceptionSmall2D':
+        model = XceptionSmall2D()
+
     # criterion = nn.CrossEntropyLoss()
     criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.AdamW(model.parameters(), lr=learningRate, weight_decay=weight_decay)
@@ -532,7 +536,7 @@ def trainModel(model, criterion, scheduler, optimizer, trainingData, validationD
 
     history = {'train_loss':train_loss, 'train_acc':train_acc, 'val_loss':val_loss, 'val_acc':val_acc}
     print('Done Training')
-    return model, criterion, device, history, epoch
+    return model, criterion, device, history, epoch+1
 
 
 # In[9]:
@@ -706,7 +710,7 @@ def evaluateModelOnTestSet(testPathName, model, testingData, criterion, device, 
 
     
     testingMetrics = {'PredictionSplits': predictsTotal, 'AnswerSplits': ansTotal, 'Predictions': [1 if ans else 0 for ans in predictions], 'Answers    ': [ 1 if ans else 0 for ans in ans],  
-                      'Accuracy':accuracy, 'F1':f1, 'Recall':recall, 'Precision':precision, 'ROC-AUC': roc_auc}
+                      'Accuracy':accuracy, 'F1':f1, 'Recall':recall, 'Precision':precision, 'ROC-AUC': roc_auc, 'fpr': fpr, 'tpr': tpr, 'thresholds': thresholds}
 
     if showROCCurve:
         plt.close()
