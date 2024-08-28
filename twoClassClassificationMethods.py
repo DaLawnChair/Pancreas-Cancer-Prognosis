@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[2]:
+# In[6]:
 
 
 # ! jupyter nbconvert --to python twoClassClassificationMethods.ipynb --output twoClassClassificationMethods.py
@@ -58,10 +58,10 @@ from sklearn.metrics import ConfusionMatrixDisplay
 from imblearn.over_sampling import SMOTE
 
 
-# In[1]:
+# In[3]:
 
 
-def seed_worker(worker_id=42):
+def seed_worker(worker_id=42): 
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
@@ -77,12 +77,11 @@ def seed_everything(seed):
     torch.backends.cudnn.benchmark = False
     torch.Generator().manual_seed(seed)
 
-
 randomSeed = 42
 seed_everything(randomSeed)
 
 
-# In[ ]:
+# In[4]:
 
 
 # Displaying segments
@@ -137,7 +136,7 @@ def displayOverlayedSegmentations(segmentedSlices, augmented_whole, augmented_se
 
 # ## Data Augmentation
 
-# In[3]:
+# In[5]:
 
 
 # Getting information about the transformations
@@ -166,7 +165,7 @@ def getTransformValue(transform, desiredTranform, desiredTranformValue):
             return t
 
 
-# In[ ]:
+# In[6]:
 
 
 ## SPLIT THE DATA
@@ -182,12 +181,12 @@ def turnDatasetIntoArrays(dataset):
 
 def underSampleData(dataset):
     patients, _, labels = turnDatasetIntoArrays(dataset)
-    differenceIn0sTo1s = labels.count([torch.tensor(0, dtype=torch.int64)]) - labels.count([torch.tensor(1, dtype=torch.int64)])
+    differenceIn0sTo1s = labels.count([torch.tensor(1, dtype=torch.int64)]) - labels.count([torch.tensor(0, dtype=torch.int64)]) 
 
     print('previous difference', differenceIn0sTo1s)
     indiesToConsiderDropping = []
     for i in range(len(labels)):
-        if labels[i] == [torch.tensor(0, dtype=torch.int64)]:
+        if labels[i] == [torch.tensor(1, dtype=torch.int64)]:
             indiesToConsiderDropping.append(i)
     
     randomIndicies = random.sample(indiesToConsiderDropping, differenceIn0sTo1s)
@@ -198,7 +197,7 @@ def underSampleData(dataset):
         del dataset[patients[randomIndicies[i]]]
 
     _1, _2, labels = turnDatasetIntoArrays(dataset)
-    differenceIn0sTo1s = labels.count([torch.tensor(0, dtype=torch.int64)]) - labels.count([torch.tensor(1, dtype=torch.int64)])
+    differenceIn0sTo1s = labels.count([torch.tensor(1, dtype=torch.int64)]) - labels.count([torch.tensor(0, dtype=torch.int64)]) 
     print('New difference after undersampling', differenceIn0sTo1s)
     return dataset
 
@@ -237,7 +236,7 @@ def underSampleData(dataset):
 #     return newTrainData
 
 
-# In[4]:
+# In[7]:
 
 
 # For 2D images:
@@ -333,7 +332,7 @@ def convertDataToLoaders(trainPatientList, valPatientList,testPatientList, allDa
 
 # # Define Models and Training
 
-# In[5]:
+# In[8]:
 
 
 class InceptionV3Small2D(torch.nn.Module):
@@ -350,9 +349,9 @@ class InceptionV3Small2D(torch.nn.Module):
 
     def forward(self, x):
         if self.model.training:
-          x = self.model(x)[0]
+            x = self.model(x)[0]
         else:
-          x = self.model(x)
+            x = self.model(x)
         x = self.sigmoid(x)
         return x 
         
@@ -423,7 +422,7 @@ def defineModel(learningRate=0.001, weight_decay=0.01, model = 'ResNet50Small2D'
     return model, criterion, scheduler, optimizer
 
 
-# In[6]:
+# In[9]:
 
 
 def train(model, loader, criterion, scheduler, optimizer, device):
@@ -501,7 +500,7 @@ def evaluate(model, loader, criterion, device):
     return epoch_loss, epoch_acc, predictions
 
 
-# In[8]:
+# In[10]:
 
 
 def trainModel(model, criterion, scheduler, optimizer, trainingData, validationData, patience=10,numOfEpochs=100):
@@ -539,7 +538,7 @@ def trainModel(model, criterion, scheduler, optimizer, trainingData, validationD
     return model, criterion, device, history, epoch+1
 
 
-# In[9]:
+# In[11]:
 
 
 # def read_history_from_pickle(testPathName):
@@ -563,7 +562,7 @@ def trainModel(model, criterion, scheduler, optimizer, trainingData, validationD
 
 
 
-# In[10]:
+# In[12]:
 
 
 ## SAVE CONTENTS
@@ -586,7 +585,7 @@ def saveResults(testPathName, model, history, training_data_transforms, saveMode
     f.close()
 
 
-# In[ ]:
+# In[13]:
 
 
 def writeDictionaryToTxtFile(filePath,dictionary, printLine=False):
@@ -598,7 +597,7 @@ def writeDictionaryToTxtFile(filePath,dictionary, printLine=False):
     f.close()
 
 
-# In[ ]:
+# In[14]:
 
 
 ## EVALUATE PERFORMANCE ON TESTING SET
@@ -685,7 +684,7 @@ def evaluateGroupVoting(model, loader, criterion, device, votingSystem, segments
     return patient_probs, patient_labels, correctLabels
 
 
-# In[1]:
+# In[15]:
 
 
 def evaluateModelOnTestSet(testPathName, model, testingData, criterion, device, votingSystem, segmentsMultiple, saveConfusionMatrix = True, showConfusionMatrix=True, showROCCurve=True, saveROCCurve=True):
@@ -744,7 +743,7 @@ def evaluateModelOnTestSet(testPathName, model, testingData, criterion, device, 
     return confusionMatrixDisp, rocCurveDisplay, testingMetrics
 
 
-# In[ ]:
+# In[16]:
 
 
 ## PLOT TRAINING AND CONFUSION MATRICIES
@@ -835,7 +834,7 @@ def plotROCCurves(testPathName, testName, rocCurves, showMatricies=True):
         plt.show()
 
 
-# In[ ]:
+# In[4]:
 
 
 ## AVERAGES CALCULATIONS
@@ -864,7 +863,6 @@ def averagePredictionTotals(predictions, numberOfTrials=5):
 
     return average
 
-
 def averageMultilabelMetricScores(scores, numberOfTrials=5, numberOfClasses=2):
     dict = {0:0,1:0}
     averages= [0]*numberOfClasses
@@ -880,7 +878,7 @@ def averageMultilabelMetricScores(scores, numberOfTrials=5, numberOfClasses=2):
     return [formatValues(mean), dict, [ [formatValues(val) for val in score] for score in scores]]
 
 
-# In[ ]:
+# In[18]:
 
 
 ## APPEND RESULTS TO XLSX
