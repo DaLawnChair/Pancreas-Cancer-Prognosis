@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[6]:
+# In[1]:
 
 
 # ! jupyter nbconvert --to python twoClassClassificationMethods.ipynb --output twoClassClassificationMethods.py
@@ -319,7 +319,12 @@ def convertDataToLoaders(trainPatientList, valPatientList,testPatientList, allDa
         
     # Convert the testing sets to data loaders
     trainingData = PatientData(trainPatientList, allData, grouped2D, segmentsMultiple, transform=training_data_transforms)
-    trainingData = DataLoader(trainingData, batch_size=batchSize, shuffle=True, worker_init_fn=seed_worker)#, sampler= TrainBalancedSampler)
+
+    # Special case because models with batch normalization layers do not accept ununiform sizes across batches
+    if segmentsMultiple == 1:
+        trainingData = DataLoader(trainingData, batch_size=batchSize, shuffle=True, worker_init_fn=seed_worker, drop_last=True)
+    else:
+        trainingData = DataLoader(trainingData, batch_size=batchSize, shuffle=True, worker_init_fn=seed_worker)#, sampler= TrainBalancedSampler)
 
     validationData = PatientData(valPatientList, allData, grouped2D, segmentsMultiple, transform=testing_data_transforms)
     validationData = DataLoader(validationData, batch_size=batchSize, shuffle=False, worker_init_fn=seed_worker)

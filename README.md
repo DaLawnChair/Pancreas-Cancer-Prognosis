@@ -1,12 +1,8 @@
 Current progress:
-* Generated new preprocessCombinations with recist criteria that groups complete response, partial response, and stable disease
-* Added code to write to 3 seperate dataframes: singleLargest.xlsx, average.xlsx, and majority.xlsx, which hold the tests for the respective evaluation metrics.
-* Added ability for the single generateKFoldsValidation() function to perform both average and majority evaluations (since they use the same model, they should do the same tests) Note that singleLargest theoretically may but shouldn't be done with the others due to grouped2D being true/false for each either. 
-* Added 'multiVoting' for voting on both systems
-* Added an append at the start to indicate model before setGridSearchParams() does the gridsearch evaluations
+* Fixed issue with models with batch normalization layers not accepting smaller data from segmentsMultiple=1 with singleLargest voting. This is because the dataset is too small with too few batches with ununiform sizes within the batches for the training dataloader. Made the training dataloader use drop the last batch for the training dataloader.
+* Added test28-8.py, which is the segmentsMultiple=1 with singleLargest voting complement to test27-8.py
+* Added NewRECISTGroupingTestsResults, a folder containing all tests performed regarding the new recist criteria and undersampled for segments=1,3,6,9,12 for singleLargest, average, and majority voting with the Formatted.xlsx prefix containing the formatted data.
 
-URGENT:
-* Make InceptionV3Small2D work with singleLargest (ie singleLargest voting, 1 segment, grouped2D with False value). Previous version was using VGG16 (however I made sure in the segments beyond 1 were redone to use Inceptionv3)
 
 Need to do [current]:
 * try SGD and other params not covered
