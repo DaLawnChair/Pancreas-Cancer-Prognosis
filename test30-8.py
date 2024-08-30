@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[3]:
 
 
 # # Convert to python script, remember to delete/comment the next line in the actual file
-# ! jupyter nbconvert --to python twoClassClassification.ipynb --output test28-8.py
+# ! jupyter nbconvert --to python twoClassClassification.ipynb --output test30-8.py
 
 # # Run the notebook in Simpson GPU server
 # CUDA_VISIBLE_DEVICES=0 python testSamples2-8.py -batchSize=16 -epochs=100 -lr=0.001 -evalDetailLine="majourity voting on smote with 2 clases" -hasBackground=f -usesLargestBox=f -segmentsMultiple=12 -dropoutRate=0.2 -grouped2D=t -modelChosen='Small2D' -votingSystem='majority'
@@ -379,7 +379,7 @@ def setGridSearchParams():
     # votingSystem = 'multiVoting' #average, singleLargest, majority, multiVoting
     sampleStrategy = 'underSampling' # 'underSampling', 'overSampling', 'normal' 
 
-    testName = f'testSamples30-8--undersampleWithOnlyRotations'
+    experimentName = f'testSamples30-8--undersampleWithOnlyRotations'
     training_data_transforms = transforms.Compose([
         transforms.RandomRotation(degrees=0.85),
         transforms.RandomHorizontalFlip(p=0.5),
@@ -413,7 +413,7 @@ def setGridSearchParams():
                 for weight_decay in [0.01,0.001]:
                     for batchSize in [16,32]:
                         for patience in [5,10]:
-                            testName = f'{testName}/{modelChosen}-segmentsMultiple={segmentsMultiple}'
+                            testName = f'{experimentName}/{modelChosen}-segmentsMultiple={segmentsMultiple}'
                             evalDetailLine = f"-modelChosen={modelChosen}-lr={learningRate}-weight_decay={weight_decay}-batchSize={batchSize}-patience={patience}"
                             testInformation = {
                                 'testName' : testName,
