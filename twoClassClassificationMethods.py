@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[3]:
 
 
 # ! jupyter nbconvert --to python twoClassClassificationMethods.ipynb --output twoClassClassificationMethods.py
@@ -142,17 +142,12 @@ def displayOverlayedSegmentations(segmentedSlices, augmented_whole, augmented_se
 # Getting information about the transformations
 def generateTransform(RandomHorizontalFlipValue=0.5,RandomVerticalFlipValue=0.5, RandomRotationValue=50, RandomElaticTransform=[0,0], brightnessConstant=0, contrastConstant=0, kernelSize=3, sigmaRange=(0.1,1.0)):
     training_data_transforms = transforms.Compose([
-        #transforms.ToPILImage(),
-        transforms.Resize(299),
-        transforms.CenterCrop(299),
-        transforms.ToTensor(),
         transforms.RandomRotation(degrees=RandomRotationValue),
         transforms.ElasticTransform(alpha=RandomElaticTransform[0], sigma=RandomElaticTransform[1]),
         transforms.ColorJitter(brightnessConstant, contrastConstant),
         transforms.GaussianBlur(kernel_size = kernelSize, sigma=sigmaRange),
         transforms.RandomHorizontalFlip(p=RandomHorizontalFlipValue),
         transforms.RandomVerticalFlip(p=RandomVerticalFlipValue),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ]) 
     return training_data_transforms
 
@@ -282,41 +277,62 @@ class PatientData(Dataset):
 
         return image, label
 
-def convertDataToLoaders(trainPatientList, valPatientList,testPatientList, allData, model, grouped2D, segmentsMultiple, training_data_transforms = None, batchSize=8):
-    
-    # Testing data tranfrom, should be just the plain images
+
+def getModelTransformation(model, training_data_transforms=None):
+    # Get the baseline tranformations for the model
     if model == 'ResNet50Small2D':
-        testing_data_transforms = transforms.Compose([
-            transforms.Resize(224),
+        resizing = transforms.Compose([
+            transforms.Resize(224)
+        ])
+        postProcessing = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]) 
     
     elif model == 'VGG16Small2D':
-        testing_data_transforms = transforms.Compose([
-            transforms.Resize(224),
+        resizing = transforms.Compose([
+            transforms.Resize(224)
+        ])
+        postProcessing = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize( mean=[0.48235, 0.45882, 0.40784], std=[0.00392156862745098, 0.00392156862745098, 0.00392156862745098])
         ]) 
     
     elif model == 'InceptionV3Small2D':
-        testing_data_transforms = transforms.Compose([
-            transforms.Resize(299),
+        resizing = transforms.Compose([
+            transforms.Resize(299)
+        ])
+        postProcessing = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ]) 
 
     elif model == 'XceptionSmall2D':
-        testing_data_transforms = transforms.Compose([
-            transforms.Resize(299),
+        resizing = transforms.Compose([
+            transforms.Resize(299)
+        ])
+        postProcessing = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5])
         ]) 
-        
+
+    # add in data further data augmentations if specified
+    if training_data_transforms == None:
+        return transforms.Compose(resizing.transforms + postProcessing.transforms)
+    else:
+        return transforms.Compose(resizing.transforms + training_data_transforms.transforms + postProcessing.transforms)
+    
+
+def convertDataToLoaders(trainPatientList, valPatientList,testPatientList, allData, model, grouped2D, segmentsMultiple, training_data_transforms = None, batchSize=8):
+    
+    testing_data_transforms = getModelTransformation(model, None)
+
     # Use the same default training transform as the testing transform if not specified
     if training_data_transforms == None:
         training_data_transforms = testing_data_transforms
-        
+    else:
+        training_data_transforms = getModelTransformation(model, training_data_transforms)
+
     # Convert the testing sets to data loaders
     trainingData = PatientData(trainPatientList, allData, grouped2D, segmentsMultiple, transform=training_data_transforms)
 
@@ -879,8 +895,10 @@ def averageMultilabelMetricScores(scores, numberOfTrials=5, numberOfClasses=2):
     for key in range(numberOfClasses):
         dict[key] = formatValues(averages[key])
 
-    mean = np.mean(averages)
-    return [formatValues(mean), dict, [ [formatValues(val) for val in score] for score in scores]]
+    
+    singleScoreAverages = meanConfidenceInterval(np.mean(scores, axis=1))
+
+    return [singleScoreAverages[0], singleScoreAverages[1], dict, [ [formatValues(val) for val in score] for score in scores]]
 
 
 # In[18]:
@@ -895,15 +913,15 @@ def appendMetricsToXLSX(evalDetailLine, testName, kFoldsTestMetrics, dataframe):
 
     predictionSplits = f"{kFoldsTestMetrics['PredictionSplits']}"
     average = f"{kFoldsTestMetrics['Accuracy'][0]} ± {kFoldsTestMetrics['Accuracy'][1]}"
-    f1 = f"{kFoldsTestMetrics['F1'][0]}, {kFoldsTestMetrics['F1'][1]}"
-    recall = f"{kFoldsTestMetrics['Recall'][0]}, {kFoldsTestMetrics['Recall'][1]}"
-    precision = f"{kFoldsTestMetrics['Precision'][0]}, {kFoldsTestMetrics['Precision'][1]}"
+    f1 = f"{kFoldsTestMetrics['F1'][0]} ± {kFoldsTestMetrics['F1'][1]} , {kFoldsTestMetrics['F1'][2]}"
+    recall = f"{kFoldsTestMetrics['Recall'][0]} ± {kFoldsTestMetrics['Recall'][1]} , {kFoldsTestMetrics['Recall'][2]}"
+    precision = f"{kFoldsTestMetrics['Precision'][0]} ± {kFoldsTestMetrics['Precision'][1]} , {kFoldsTestMetrics['Precision'][2]}"
     rocAuc = f"{kFoldsTestMetrics['ROC-AUC'][0]} ± {kFoldsTestMetrics['ROC-AUC'][1]}"
     endingEpochs = f"{kFoldsTestMetrics['endingEpochs']}"
     accuracyData = f"{kFoldsTestMetrics['Accuracy'][2]}"
-    f1Data = f"{kFoldsTestMetrics['F1'][2]}"
-    recallData = f"{kFoldsTestMetrics['Recall'][2]}"
-    precisionData = f"{kFoldsTestMetrics['Precision'][2]}"
+    f1Data = f"{kFoldsTestMetrics['F1'][3]}"
+    recallData = f"{kFoldsTestMetrics['Recall'][3]}"
+    precisionData = f"{kFoldsTestMetrics['Precision'][3]}"
     rocAUCData = f"{kFoldsTestMetrics['ROC-AUC'][2]}"
     
     exportValue = [evalDetailLine, testName, predictionSplits, average, f1, recall, precision, rocAuc, endingEpochs, accuracyData, f1Data, recallData, precisionData, rocAUCData]

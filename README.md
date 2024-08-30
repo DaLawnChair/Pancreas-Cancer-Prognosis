@@ -1,8 +1,9 @@
 Current progress:
-* Fixed issue with models with batch normalization layers not accepting smaller data from segmentsMultiple=1 with singleLargest voting. This is because the dataset is too small with too few batches with ununiform sizes within the batches for the training dataloader. Made the training dataloader use drop the last batch for the training dataloader.
-* Added test28-8.py, which is the segmentsMultiple=1 with singleLargest voting complement to test27-8.py
-* Added NewRECISTGroupingTestsResults, a folder containing all tests performed regarding the new recist criteria and undersampled for segments=1,3,6,9,12 for singleLargest, average, and majority voting with the Formatted.xlsx prefix containing the formatted data.
-
+* Changed behaviour of averageMultilabelMetricScores() to calculate the mean, sem, dictionary averages, and data; adding in the sem parameter.
+* Updated the result of averageMultilabelMetricScores() to appendMetricsToXLSX() 
+* updated Formatted.xlsx versions of NEWRECISTGroupingTestResults
+* made the segmentsMultiple determine the voting system for running the gridsearch function, now can run all tests in 1 script.
+* Added ability to easier generate transforms with adding Compose objects and getModelTransformation(), which houses the default transformations and can add in additional transformations
 
 Need to do [current]:
 * try SGD and other params not covered
