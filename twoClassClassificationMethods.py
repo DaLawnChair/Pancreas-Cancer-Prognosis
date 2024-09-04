@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[3]:
+# In[12]:
 
 
 # ! jupyter nbconvert --to python twoClassClassificationMethods.ipynb --output twoClassClassificationMethods.py
@@ -174,61 +174,98 @@ def turnDatasetIntoArrays(dataset):
         images.append([dataset[patient]['images']]) 
     return patients, images, labels
 
-def underSampleData(dataset):
+def underSampleData(dataset, trainFolders):
     patients, _, labels = turnDatasetIntoArrays(dataset)
-    differenceIn0sTo1s = labels.count([torch.tensor(1, dtype=torch.int64)]) - labels.count([torch.tensor(0, dtype=torch.int64)]) 
+    
+    print('Undersample data')
+    print('==================================')
+    
+    indiciesToConsiderDropping = []
+    indiciesOfOtherClass = []
+    
+    for patient in trainFolders:
+        print(dataset[patient]['label'])
+        if dataset[patient]['label'] == torch.tensor(1, dtype=torch.int64):
+            indiciesToConsiderDropping.append(patient)
+            print('yes')
+        else:
+            indiciesOfOtherClass.append(patient)
 
+    differenceIn0sTo1s = len(indiciesToConsiderDropping) - len(indiciesOfOtherClass) 
     print('previous difference', differenceIn0sTo1s)
-    indiesToConsiderDropping = []
-    for i in range(len(labels)):
-        if labels[i] == [torch.tensor(1, dtype=torch.int64)]:
-            indiesToConsiderDropping.append(i)
-    
-    randomIndicies = random.sample(indiesToConsiderDropping, differenceIn0sTo1s)
-    print(randomIndicies)
-    print(len(randomIndicies))
-    
-    for i in range(len(randomIndicies)):
-        del dataset[patients[randomIndicies[i]]]
 
-    _1, _2, labels = turnDatasetIntoArrays(dataset)
-    differenceIn0sTo1s = labels.count([torch.tensor(1, dtype=torch.int64)]) - labels.count([torch.tensor(0, dtype=torch.int64)]) 
+    randomIndicies = random.sample(indiciesToConsiderDropping, differenceIn0sTo1s)
+        
+    for patient in randomIndicies:
+        del dataset[patient]
+        trainFolders.remove(patient)
+    
+    # Validate the size
+    indiciesToConsiderDropping = []
+    indiciesOfOtherClass = []
+    for patient in trainFolders:
+        if dataset[patient]['label'] == torch.tensor(1, dtype=torch.int64):
+            indiciesToConsiderDropping.append(patient)
+        else:
+            indiciesOfOtherClass.append(patient)
+
+    differenceIn0sTo1s = len(indiciesToConsiderDropping) - len(indiciesOfOtherClass) 
+
     print('New difference after undersampling', differenceIn0sTo1s)
-    return dataset
+    print('Total size of dataset', len(dataset))
+    return dataset, trainFolders
 
-# def overSampleData(trainFolders):
-#     smote = SMOTE(random_state=randomSeed)
-#     images = np.array()
-#     patients, images, labels = turnDatasetIntoArrays(trainData)
-#     images = np.array(images)
+def oversampleData(dataset, trainFolders):
+    """Oversamples the training data to make an even number of patients of both labels present in each class"""
+    
+    patients, _, labels = turnDatasetIntoArrays(dataset)
 
-#     # Get the 1D image
-#     if len(images[0].shape)==3:
-#         oneDShape = images[0].shape[0]*images[0].shape[1]
-#     else:
-#         oneDShape = images[0].shape[0]*images[0].shape[1]*images[0].shape[2]
+    print('Oversampling data')
+    print('==================================')
+    
+    indiciesToRepeat = []
+    indiciesOfOtherClass = []
+    
+    for patient in trainFolders:
+        if dataset[patient]['label'] == [torch.tensor(0, dtype=torch.int64)]:
+            indiciesToRepeat.append(patient)
+        else:
+            indiciesOfOtherClass.append(patient)
 
-#     singleShape = images[0].shape
+    differenceIn0sTo1s = len(indiciesOfOtherClass) - len(indiciesToRepeat) 
+    print('previous difference', differenceIn0sTo1s)
 
-#     # Use SMOTE to oversample the data
-#     print('images reshape',images.reshape(images.shape[0],oneDShape).shape)
-#     imagesSmote, labels = smote.fit_resample(images.reshape(images.shape[0],oneDShape), labels)
-#     if len(images.shape)==3:
-#         images = imagesSmote.reshape(imagesSmote.shape[0], images[0].shape[0],images[0].shape[1])
-#     else:
-#         images = imagesSmote.reshape(imagesSmote.shape[0], images[0].shape[0],images[0].shape[1],images[0].shape[2])
+    # Guarentee indicies are repeated if there is room    
+    randomIndicies = indiciesToRepeat * (differenceIn0sTo1s // len(indiciesToRepeat))
 
-#     #Make a new train dataset that is oversampled now
-#     newTrainData = {}
-#     for i in range(images.shape[0]):
-#         newTrainData[str(i)] = {'images':images[i], 'label':labels[i]}
+    # Add on randomly selected indicies to repeat to make up the difference
+    randomIndicies = randomIndicies + random.sample(indiciesToRepeat, differenceIn0sTo1s-len(randomIndicies))
+    
+    # Add the new patients to the dataset and the respective train/test folders
+    for patient in indiciesToRepeat:
+        i=1
+        while True: 
+            patientName = f'{patient}_{i}'
+            if patientName not in trainFolders:
+                patientName = f'{patient}_{i}'
+                trainFolders.append(patientName)
+                break 
+            i+=1
+        dataset[patientName] = {'images': dataset[patient]['images'], 'label':dataset[patient]['label']}
 
-#     print('Dataset after Smote', getDatasetShape(newTrainData))
-#     from collections import Counter
-#     counter  = Counter(labels)
-#     print('Splits for training',sorted(counter.items()))
-
-#     return newTrainData
+    # Validate the size
+    indiciesToRepeat = []
+    indiciesOfOtherClass = []
+    for patient in trainFolders:
+        if dataset[patient]['label'] == torch.tensor(0, dtype=torch.int64):
+            indiciesToRepeat.append(patient)
+        else:
+            indiciesOfOtherClass.append(patient)
+    differenceIn0sTo1s = len(indiciesOfOtherClass) - len(indiciesToRepeat) 
+    
+    print('New difference after undersampling', differenceIn0sTo1s)
+    print('Total size of dataset', len(dataset))
+    return dataset, trainFolders
 
 
 # In[7]:
@@ -336,11 +373,8 @@ def convertDataToLoaders(trainPatientList, valPatientList,testPatientList, allDa
     # Convert the testing sets to data loaders
     trainingData = PatientData(trainPatientList, allData, grouped2D, segmentsMultiple, transform=training_data_transforms)
 
-    # Special case because models with batch normalization layers do not accept ununiform sizes across batches
-    if segmentsMultiple == 1:
-        trainingData = DataLoader(trainingData, batch_size=batchSize, shuffle=True, worker_init_fn=seed_worker, drop_last=True)
-    else:
-        trainingData = DataLoader(trainingData, batch_size=batchSize, shuffle=True, worker_init_fn=seed_worker)#, sampler= TrainBalancedSampler)
+    # Need to drop the last layer because of batch normalization 
+    trainingData = DataLoader(trainingData, batch_size=batchSize, shuffle=True, worker_init_fn=seed_worker, drop_last=True)#, sampler= TrainBalancedSampler)
 
     validationData = PatientData(valPatientList, allData, grouped2D, segmentsMultiple, transform=testing_data_transforms)
     validationData = DataLoader(validationData, batch_size=batchSize, shuffle=False, worker_init_fn=seed_worker)
