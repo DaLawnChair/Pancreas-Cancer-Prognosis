@@ -1,7 +1,15 @@
-# %%
-#! jupyter nbconvert --to python twoClassClassificationMethods.ipynb --output twoClassClassificationMethods.py
+#!/usr/bin/env python
+# coding: utf-8
 
-# %%
+# In[ ]:
+
+
+# ! jupyter nbconvert --to python twoClassClassificationMethods.ipynb --output twoClassClassificationMethods.py
+
+
+# In[ ]:
+
+
 # Image reading and file handling 
 import pandas as pd
 import SimpleITK as sitk 
@@ -49,13 +57,16 @@ from sklearn.metrics import ConfusionMatrixDisplay
 # Oversampling
 from imblearn.over_sampling import SMOTE
 
-# %%
+
+# In[ ]:
+
+
 def seed_worker(worker_id=42): 
     worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
-def seed_everything(seed):
+def seed_everything(seed=42):
     os.environ['PYTHONHASHSEED'] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
@@ -69,7 +80,10 @@ def seed_everything(seed):
 randomSeed = 42
 seed_everything(randomSeed)
 
-# %%
+
+# In[ ]:
+
+
 # Displaying segments
 #==========================================================================================
 
@@ -119,10 +133,12 @@ def displayOverlayedSegmentations(segmentedSlices, augmented_whole, augmented_se
         axis[rowIdx][i%columnLen].axis('off')
     plt.show()
 
-# %% [markdown]
+
 # ## Data Augmentation
 
-# %%
+# In[ ]:
+
+
 # Getting information about the transformations
 def generateTransform(RandomHorizontalFlipValue=0.5,RandomVerticalFlipValue=0.5, RandomRotationValue=50, RandomElaticTransform=[0,0], brightnessConstant=0, contrastConstant=0, kernelSize=3, sigmaRange=(0.1,1.0)):
     training_data_transforms = transforms.Compose([
@@ -143,7 +159,10 @@ def getTransformValue(transform, desiredTranform, desiredTranformValue):
         if isinstance(t, desiredTranform):
             return t
 
-# %%
+
+# In[ ]:
+
+
 ## SPLIT THE DATA
 
 def turnDatasetIntoArrays(dataset):
@@ -248,7 +267,10 @@ def oversampleData(dataset, trainFolders):
     print('Total size of dataset', len(dataset))
     return dataset, trainFolders
 
-# %%
+
+# In[ ]:
+
+
 # For 2D images:
 # ## Working with pytorch tensors
 import copy
@@ -283,9 +305,13 @@ class PatientData(Dataset):
             label = self.setData[self.patients[patient_idx]]['label']
 
         # Convert to RGB
-        image = (image * 255).astype(np.uint16)
-        image = image[0]
-        image = Image.fromarray(image)
+        if self.segmentsMultiple==1:
+          image = (image * 255).astype(np.uint16)
+          image = image[0]
+          image = Image.fromarray(image)
+        else:
+          image = Image.fromarray((image * 255).astype(np.uint16))
+        
         image = image.convert("RGB")
         
         # Apply augmentations if there are any
@@ -364,10 +390,12 @@ def convertDataToLoaders(trainPatientList, valPatientList,testPatientList, allDa
 
     return trainingData, validationData, testingData, training_data_transforms
 
-# %% [markdown]
+
 # # Define Models and Training
 
-# %%
+# In[ ]:
+
+
 class InceptionV3Small2D(torch.nn.Module):
     def __init__(self):
         super(InceptionV3Small2D, self).__init__()
@@ -454,7 +482,10 @@ def defineModel(learningRate=0.001, weight_decay=0.01, model = 'ResNet50Small2D'
     scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
     return model, criterion, scheduler, optimizer
 
-# %%
+
+# In[ ]:
+
+
 def train(model, loader, criterion, scheduler, optimizer, device):
     model.train()
     running_loss = 0.0
@@ -529,7 +560,10 @@ def evaluate(model, loader, criterion, device):
 
     return epoch_loss, epoch_acc, predictions
 
-# %%
+
+# In[ ]:
+
+
 def trainModel(model, criterion, scheduler, optimizer, trainingData, validationData, patience=10,numOfEpochs=100):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Using this device:', device)
@@ -564,7 +598,10 @@ def trainModel(model, criterion, scheduler, optimizer, trainingData, validationD
     print('Done Training')
     return model, criterion, device, history, epoch+1
 
-# %%
+
+# In[ ]:
+
+
 # def read_history_from_pickle(testPathName):
 #     with open(testPathName+'/history.pkl', 'rb') as fp:
 #         history = pickle.load(fp)
@@ -586,7 +623,9 @@ def trainModel(model, criterion, scheduler, optimizer, trainingData, validationD
 
 
 
-# %%
+# In[ ]:
+
+
 ## SAVE CONTENTS
 def saveResults(testPathName, model, history, training_data_transforms, saveTrainTransforms=False, saveModel=True):
     os.makedirs(testPathName, exist_ok=True)
@@ -607,7 +646,10 @@ def saveResults(testPathName, model, history, training_data_transforms, saveTrai
             f.write(line)
         f.close()
 
-# %%
+
+# In[ ]:
+
+
 def writeDictionaryToTxtFile(filePath,dictionary, printLine=False):
     f = open(filePath, 'w')
     for key, value in dictionary.items():
@@ -616,7 +658,10 @@ def writeDictionaryToTxtFile(filePath,dictionary, printLine=False):
             print(f'{key}: {value}')
     f.close()
 
-# %%
+
+# In[ ]:
+
+
 ## EVALUATE PERFORMANCE ON TESTING SET
 def formatDataFromGroupVoting(outputs):
     ## Outputs are in the format of [array([[False],[False],[False],[False],[False],[False], ....]), array([[False], .....)]
@@ -700,7 +745,10 @@ def evaluateGroupVoting(model, loader, criterion, device, votingSystem, segments
 
     return patient_probs, patient_labels, correctLabels
 
-# %%
+
+# In[ ]:
+
+
 def evaluateModelOnTestSet(testPathName, model, testingData, criterion, device, votingSystem, segmentsMultiple, saveConfusionMatrix = True, showConfusionMatrix=True, showROCCurve=True, saveROCCurve=True):
     predictProbs, predictions, ans = evaluateGroupVoting(model, testingData, criterion, device, votingSystem, segmentsMultiple)
     
@@ -756,7 +804,10 @@ def evaluateModelOnTestSet(testPathName, model, testingData, criterion, device, 
     
     return confusionMatrixDisp, rocCurveDisplay, testingMetrics
 
-# %%
+
+# In[ ]:
+
+
 ## PLOT TRAINING AND CONFUSION MATRICIES
 def plotTraining(testPathName, testName, history, saveFigure=True, showResult=True):
     plt.style.use('default')
@@ -844,7 +895,10 @@ def plotROCCurves(testPathName, testName, rocCurves, showMatricies=True):
         plt.close()
         plt.show()
 
-# %%
+
+# In[ ]:
+
+
 ## AVERAGES CALCULATIONS
 
 def formatValues(value, significantDigits=4):
@@ -887,7 +941,10 @@ def averageMultilabelMetricScores(scores, numberOfTrials=5, numberOfClasses=2):
 
     return [singleScoreAverages[0], singleScoreAverages[1], dict, [ [formatValues(val) for val in score] for score in scores]]
 
-# %%
+
+# In[ ]:
+
+
 ## APPEND RESULTS TO XLSX
 def addEvalDetailToModel(evalDetailLine, dataframe):
     exportValue = [evalDetailLine]
@@ -911,5 +968,4 @@ def appendMetricsToXLSX(evalDetailLine, testName, kFoldsTestMetrics, dataframe):
     exportValue = [evalDetailLine, testName, predictionSplits, average, f1, recall, precision, rocAuc, endingEpochs, accuracyData, f1Data, recallData, precisionData, rocAUCData]
   
     dataframe.loc[dataframe.shape[0]] = exportValue 
-
 
