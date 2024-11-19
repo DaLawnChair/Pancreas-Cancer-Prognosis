@@ -1,0 +1,11 @@
++look into heat maps of the model
+++will tell if the segment is needed to be properly segmented very well
+
++want more infor about the data from the model
+
+
++want autosegmentation work done by Mohammad
+++
+
+
+wants pipeline from autosegment,classifcaition,and get the heatmap
