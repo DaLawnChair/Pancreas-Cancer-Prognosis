@@ -1,6 +1,11 @@
-# %%
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
 # # Convert to python script, remember to delete/comment the next line in the actual file
-# ! jupyter nbconvert --to python twoClassClassification.ipynb --output test11-11.py
+# ! jupyter nbconvert --to python twoClassClassification.ipynb --output testSamples21-11.py
 
 # # Run the notebook in Simpson GPU server
 # CUDA_VISIBLE_DEVICES=0 python testSamples2-8.py -batchSize=16 -epochs=100 -lr=0.001 -evalDetailLine="majourity voting on smote with 2 clases" -hasBackground=f -usesLargestBox=f -segmentsMultiple=12 -dropoutRate=0.2 -grouped2D=t -modelChosen='Small2D' -votingSystem='majority'
@@ -9,10 +14,12 @@
 
 # CUDA_VISIBLE_DEVICES=2 python testSamples11-11.py
 
-# %% [markdown]
+
 # ### # Imports
 
-# %%
+# In[2]:
+
+
 # Image reading and file handling 
 import pandas as pd
 import SimpleITK as sitk 
@@ -68,7 +75,10 @@ from imblearn.over_sampling import SMOTE
 # importlib.reload(sys.modules['twoClassClassificaitonMethods'])
 from twoClassClassificationMethods import *
 
-# %%
+
+# In[3]:
+
+
 # ! pip freeze > requirements.txt
 # ! pip uninstall -y -r requirements.txt
 
@@ -94,7 +104,10 @@ from twoClassClassificationMethods import *
 # ! python --version
 # ! pip3 freeze > research3D.txt
 
-# %%
+
+# In[ ]:
+
+
 def appendTestToDictionary(votingResults, testingMetrics,endingEpoch,history,confusionMatrixDisp,rocCurveDisplay, model):
 
     votingResults["accuracies"].append(testingMetrics['Accuracy'])
@@ -123,11 +136,11 @@ def saveTestResults(votingResults, resultName, testInformation, dataframe, saveM
     
     os.makedirs(resultName)
     # Write the test information and testvalues to files
-    print(f"\n--------------------------------{testInformation['evalDetailLine']} -- AVERAGES --------------------------------")
+    ##print(f"\n--------------------------------{testInformation['evalDetailLine']} -- AVERAGES --------------------------------")
     writeDictionaryToTxtFile(resultName+'/kFoldsTestMetrics.txt',kFoldsTestMetrics, printLine=True)
     writeDictionaryToTxtFile(resultName+'/testInformation.txt',testInformation, printLine=False)
     
-    print('\n\n')
+    #print('\n\n')
     # Plot training, confusion matrix, and roc curves for each fold as a single .png
     plotConfusionMatricies(resultName, f"{testInformation['evalDetailLine']}", votingResults["confusion_matricies"])
     plotROCCurves(resultName, f"{testInformation['evalDetailLine']}", votingResults["rocCurves"])
@@ -139,7 +152,9 @@ def saveTestResults(votingResults, resultName, testInformation, dataframe, saveM
 
     appendMetricsToXLSX(testInformation['evalDetailLine'], testInformation['testName'], kFoldsTestMetrics, dataframe)
 
-# %%
+
+# In[ ]:
+
 
 def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
 #     testInformation = {
@@ -164,18 +179,13 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
 
 
     # Get the testing set
-    testSet = getTestingSet(dataset).keys()
-
     patients = list(dataset.keys())
-    # Get rid of the patients dataset that are in the testing set
-    dataForSplits = list(set(patients).symmetric_difference(set(testSet)))
-
-    fakeData = [-1] * len(dataForSplits)
-
+    labels = [dataset[patient]['label'] for patient in patients]
+    
     # Split the dataset into k folds
     stratifiedFolds = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
-    stratifiedFolds.get_n_splits(dataForSplits, len(dataForSplits))
-    splits = enumerate(stratifiedFolds.split(dataForSplits,fakeData))
+    stratifiedFolds.get_n_splits(patients, len(labels))
+    splits = enumerate(stratifiedFolds.split(patients,labels))
 
     singleLargestVoting = {
         "accuracies": [],
@@ -218,7 +228,7 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
         "models": []
     }
     
-    print(f"\n\n====================Begin testing for {testInformation['evalDetailLine']}====================")
+    #print(f"\n\n====================Begin testing for {testInformation['evalDetailLine']}====================")
 
     originalDataset = copy.deepcopy(dataset)
 
@@ -229,8 +239,7 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
         patients = list(dataset.keys())
         trainFolders = [patients[i] for i in trainIndicies]
         valFolders = [patients[i] for i in valIndicies]
-        testFolders = list(testSet)
-
+        testFolders = [patients[i] for i in valIndicies]
 
         if testInformation['sampleStrategy'] == 'overSampling':
             dataset, trainFolders = oversampleData(dataset, trainFolders)
@@ -244,11 +253,30 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
                                                                                       batchSize=testInformation['batchSize'])
         
 
-        print(f"\n--------------------------------{testInformation['evalDetailLine']} -- Fold #{i+1}--------------------------------")
-        print('Train Data:', len(trainFolders))
-        print('Validation Data:', len(valFolders))
-        print('Test Data:', len(testFolders))
+        #print(f"\n--------------------------------{testInformation['evalDetailLine']} -- Fold #{i+1}--------------------------------")
 
+        # f = open(f"Testcheck{i}-{testInformation['modelChosen']}.txt","r")
+
+        # trainDataPrint = f"Train patients ({len(trainFolders)}): {trainFolders}"
+        # valDataPrint = f"validation patients ({len(testFolders)}): {valFolders}"
+        # for line in f.readline():
+        #     if line.strip() != trainDataPrint or line.strip() != valDataPrint:
+        #         print("difference in strings")
+        #         assert False
+        print(f"Train patients ({len(trainFolders)}):", trainFolders)
+        print(f"validation patients ({len(testFolders)}):", valFolders)
+        print(f"test patients ({len(testFolders)}):", "same as valFolders" if testFolders==valFolders else testFolders)
+        
+        with open(f"Testcheck{i}-{testInformation['modelChosen']}.txt", 'w') as f:
+            print(f"Train patients ({len(trainFolders)}):", trainFolders, file=f)
+            print(f"validation patients ({len(testFolders)}):", valFolders,file=f)     
+            print(f"test patients ({len(testFolders)}):", "same as valFolders" if testFolders==valFolders else testFolders, file=f)
+            
+        #f.write(f"Train patients ({len(trainFolders)}): {trainFolders}".encode('utf-8', 'ignore'))
+        #f.write(f"validation patients ({len(testFolders)}): {valFolders}".encode('utf-8', 'ignore'))
+        
+        f.close()
+        continue
 
         resultName = 'Tests/'+testInformation['testName']+'/'+testInformation['evalDetailLine']
         resultNameWithFold = resultName+f'/fold-{i+1}/'
@@ -294,21 +322,23 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
 
 
 
-    if testInformation['votingSystem']== 'singleLargest':
-        saveTestResults(singleLargestVoting, resultName+'/singleLargestVoting', testInformation, dataframes['singleLargest.xlsx'])
-    else:
-        saveTestResults(averageVoting, resultName+'/averageVoting', testInformation, dataframes['average.xlsx'])
-        saveTestResults(majorityVoting, resultName+'/majorityVoting', testInformation, dataframes['majority.xlsx'])
+    # if testInformation['votingSystem']== 'singleLargest':
+    #     saveTestResults(singleLargestVoting, resultName+'/singleLargestVoting', testInformation, dataframes['singleLargest.xlsx'])
+    # else:
+    #     saveTestResults(averageVoting, resultName+'/averageVoting', testInformation, dataframes['average.xlsx'])
+    #     saveTestResults(majorityVoting, resultName+'/majorityVoting', testInformation, dataframes['majority.xlsx'])
 
-    #Make copies of the two scripts
-    for filename in os.listdir():
-        # Check if the file ends with .py
-        if filename.endswith('.py'):
-            # Copy the .py file
-            shutil.copy(filename, resultName+'/'+filename)
+    # #Make copies of the two scripts
+    # for filename in os.listdir():
+    #     # Check if the file ends with .py
+    #     if filename.endswith('.py'):
+    #         # Copy the .py file
+    #         shutil.copy(filename, resultName+'/'+filename)
 
 
-# %%
+# In[ ]:
+
+
 def loadFromPickle(name):
     with open(f'{name}.pkl', 'rb') as fp:
         data = pkl.load(fp)
@@ -323,7 +353,7 @@ def checkShapesConsistent(data):
     size = data[keys[0]]['images'].shape
     for i in range(len(data)):    
         if size != data[keys[i]]['images'].shape:
-            print(f"Error in shape at index {i} with shape {data[keys[i]]['images'].shape}")
+            #print(f"Error in shape at index {i} with shape {data[keys[i]]['images'].shape}")
             return False , size
     return True , size
     
@@ -334,7 +364,7 @@ def getTestingSet(dataset):
     seed_everything(42)
     # choose 14 samples of the 89 samples, for about 85% split between train and validation and 15% for test
     # testSamples = random.sample(list(dataset.keys()), 14) 
-    print('Testing set samples (key, classification):')
+    #print('Testing set samples (key, classification):')
     
     # Have defined our test set from the above, hardcoding for validity
     testSet = {"CASE616": torch.tensor(1, dtype=torch.float32),
@@ -353,7 +383,8 @@ def getTestingSet(dataset):
                 "CASE254": torch.tensor(1, dtype=torch.float32)}
     
     for key in testSet:
-        print(key,dataset[key]['label'])
+        pass
+        #print(key,dataset[key]['label'])
     
     return testSet
 
@@ -364,19 +395,21 @@ def getDataset(testInformation):
 
     ## LOAD THE DATA
     ## ==============================================================================================================
-    # name = f"preprocessCombinations/hasBackground={testInformation['hasBackground']}-usesLargestBox={testInformation['usesLargestBox']}-segmentsMultiple={testInformation['segmentsMultiple']}-size=(119,119)"
-    name = f"preprocessCombinations/hasBackground={True}-usesLargestBox={True}-segmentsMultiple={3}-size=(119,119)"
-
+    name = f"preprocessCombinations/hasBackground={testInformation['hasBackground']}-usesLargestBox={testInformation['usesLargestBox']}-segmentsMultiple={testInformation['segmentsMultiple']}-size=(119,119)"
+    
     dataset = loadFromPickle(name)
     consitencyCheck, instanceSize = checkShapesConsistent(dataset)
-    print('Sizes are all the same? ', consitencyCheck)
+    #print('Sizes are all the same? ', consitencyCheck)
     assert consitencyCheck
-    print(f'dataset shape:')
-    print(len(dataset), instanceSize)
+    #print(f'dataset shape:')
+    #print(len(dataset), instanceSize)
     
     return dataset
 
-# %%
+
+# In[ ]:
+
+
 columns = ['TestName','RunData','PredictionSplits','Accuracy','F1','Recall','Precision','ROC-AUC','EndingEpoch','AccuracyData','F1Data','RecallData','PrecisionData','ROC-AUCData']
 #sheetName = 'KFolds'
 
@@ -396,7 +429,8 @@ def getDataframes():
 
 def gridSearch(testInformation):
     for key, value in testInformation.items():
-        print(f'{key}: {value}')
+        #print(f'{key}: {value}')
+        pass
 
     dataframes = getDataframes()
     #addEvalDetailToModel(testInformation['evalDetailLine'],dataframe)
@@ -415,7 +449,7 @@ def setGridSearchParams():
     # votingSystem = 'multiVoting' #average, singleLargest, majority, multiVoting
     sampleStrategy = 'normal' # 'underSampling', 'overSampling', 'normal' 
 
-    experimentName = f'testSamples11-11--normal'
+    experimentName = f'testSamples21-11--normal'
     training_data_transforms = None
     # training_data_transforms = transforms.Compose([
     #     transforms.RandomRotation(degrees=0.85),
@@ -423,7 +457,7 @@ def setGridSearchParams():
     #     transforms.RandomVerticalFlip(p=0.5)
     # ]) 
 
-    for segmentsMultiple in [1,3,6,9,12]:
+    for segmentsMultiple in [3]:
 
         if segmentsMultiple==1:
             votingSystem = 'singleLargest'
@@ -446,10 +480,10 @@ def setGridSearchParams():
                 dataframe.to_excel(sheetName, index=False, header=False)
             
             # Beging hyperparemeterizing
-            for learningRate in [0.001,0.0001]:
-                for weight_decay in [0.01,0.001]:
-                    for batchSize in [8,16]:
-                        for patience in [5,10]:
+            for learningRate in [0.001]:
+                for weight_decay in [0.01]:
+                    for batchSize in [8]:
+                        for patience in [5]:
                             testName = f'{experimentName}/{modelChosen}-segmentsMultiple={segmentsMultiple}'
                             evalDetailLine = f"-modelChosen={modelChosen}-lr={learningRate}-weight_decay={weight_decay}-batchSize={batchSize}-patience={patience}"
                             testInformation = {
@@ -472,5 +506,4 @@ def setGridSearchParams():
                             gridSearch(testInformation)
 
 setGridSearchParams()
-
 

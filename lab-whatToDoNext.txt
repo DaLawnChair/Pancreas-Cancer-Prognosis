@@ -9,3 +9,13 @@
 
 
 wants pipeline from autosegment,classifcaition,and get the heatmap
+
+
+Need to get the labels and use it for the stratifiedkfolds, cannot use fakeData
+--
+
+
+-train on all train images, test on test images
+--throw away test set, just do train and validation
+
+-get train and test cases for Dashti for each fold

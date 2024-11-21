@@ -175,6 +175,7 @@ def turnDatasetIntoArrays(dataset):
     return patients, images, labels
 
 def underSampleData(dataset, trainFolders):
+    seed_everything()
     patients, _, labels = turnDatasetIntoArrays(dataset)
     
     print('Undersample data')
@@ -217,7 +218,7 @@ def underSampleData(dataset, trainFolders):
 
 def oversampleData(dataset, trainFolders):
     """Oversamples the training data to make an even number of patients of both labels present in each class"""
-    
+    seed_everything()
     patients, _, labels = turnDatasetIntoArrays(dataset)
 
     print('Oversampling data')
@@ -297,6 +298,8 @@ class PatientData(Dataset):
         if self.grouped2D==False:
             image = self.setData[self.patients[idx]]['images']
             label = self.setData[self.patients[idx]]['label']
+
+            image = Image.fromarray((image * 255).astype(np.uint16))
         else:
             patient_idx = idx // self.segmentsMultiple
             slice_idx = idx % self.segmentsMultiple
@@ -304,13 +307,7 @@ class PatientData(Dataset):
             image = self.setData[self.patients[patient_idx]]['images'][slice_idx]
             label = self.setData[self.patients[patient_idx]]['label']
 
-        # Convert to RGB
-        if self.segmentsMultiple==1:
-          image = (image * 255).astype(np.uint16)
-          image = image[0]
-          image = Image.fromarray(image)
-        else:
-          image = Image.fromarray((image * 255).astype(np.uint16))
+            image = Image.fromarray((image * 255).astype(np.uint16))
         
         image = image.convert("RGB")
         

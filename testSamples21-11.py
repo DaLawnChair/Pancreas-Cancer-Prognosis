@@ -1,6 +1,11 @@
-# %%
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[ ]:
+
+
 # # Convert to python script, remember to delete/comment the next line in the actual file
-# ! jupyter nbconvert --to python twoClassClassification.ipynb --output test11-11.py
+# ! jupyter nbconvert --to python twoClassClassification.ipynb --output testSamples21-11.py
 
 # # Run the notebook in Simpson GPU server
 # CUDA_VISIBLE_DEVICES=0 python testSamples2-8.py -batchSize=16 -epochs=100 -lr=0.001 -evalDetailLine="majourity voting on smote with 2 clases" -hasBackground=f -usesLargestBox=f -segmentsMultiple=12 -dropoutRate=0.2 -grouped2D=t -modelChosen='Small2D' -votingSystem='majority'
@@ -9,10 +14,12 @@
 
 # CUDA_VISIBLE_DEVICES=2 python testSamples11-11.py
 
-# %% [markdown]
+
 # ### # Imports
 
-# %%
+# In[2]:
+
+
 # Image reading and file handling 
 import pandas as pd
 import SimpleITK as sitk 
@@ -68,7 +75,10 @@ from imblearn.over_sampling import SMOTE
 # importlib.reload(sys.modules['twoClassClassificaitonMethods'])
 from twoClassClassificationMethods import *
 
-# %%
+
+# In[3]:
+
+
 # ! pip freeze > requirements.txt
 # ! pip uninstall -y -r requirements.txt
 
@@ -94,7 +104,10 @@ from twoClassClassificationMethods import *
 # ! python --version
 # ! pip3 freeze > research3D.txt
 
-# %%
+
+# In[ ]:
+
+
 def appendTestToDictionary(votingResults, testingMetrics,endingEpoch,history,confusionMatrixDisp,rocCurveDisplay, model):
 
     votingResults["accuracies"].append(testingMetrics['Accuracy'])
@@ -139,7 +152,9 @@ def saveTestResults(votingResults, resultName, testInformation, dataframe, saveM
 
     appendMetricsToXLSX(testInformation['evalDetailLine'], testInformation['testName'], kFoldsTestMetrics, dataframe)
 
-# %%
+
+# In[ ]:
+
 
 def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
 #     testInformation = {
@@ -164,18 +179,13 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
 
 
     # Get the testing set
-    testSet = getTestingSet(dataset).keys()
-
     patients = list(dataset.keys())
-    # Get rid of the patients dataset that are in the testing set
-    dataForSplits = list(set(patients).symmetric_difference(set(testSet)))
-
-    fakeData = [-1] * len(dataForSplits)
-
+    labels = [dataset[patient]['label'] for patient in patients]
+    
     # Split the dataset into k folds
     stratifiedFolds = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
-    stratifiedFolds.get_n_splits(dataForSplits, len(dataForSplits))
-    splits = enumerate(stratifiedFolds.split(dataForSplits,fakeData))
+    stratifiedFolds.get_n_splits(patients, len(labels))
+    splits = enumerate(stratifiedFolds.split(patients,labels))
 
     singleLargestVoting = {
         "accuracies": [],
@@ -229,8 +239,7 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
         patients = list(dataset.keys())
         trainFolders = [patients[i] for i in trainIndicies]
         valFolders = [patients[i] for i in valIndicies]
-        testFolders = list(testSet)
-
+        testFolders = [patients[i] for i in valIndicies]
 
         if testInformation['sampleStrategy'] == 'overSampling':
             dataset, trainFolders = oversampleData(dataset, trainFolders)
@@ -245,10 +254,10 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
         
 
         print(f"\n--------------------------------{testInformation['evalDetailLine']} -- Fold #{i+1}--------------------------------")
-        print('Train Data:', len(trainFolders))
-        print('Validation Data:', len(valFolders))
-        print('Test Data:', len(testFolders))
 
+        print(f"Train patients ({len(trainFolders)}):", trainFolders)
+        print(f"validation patients ({len(testFolders)}):", valFolders)
+        print(f"test patients ({len(testFolders)}):", "same as valFolders" if testFolders==valFolders else testFolders)
 
         resultName = 'Tests/'+testInformation['testName']+'/'+testInformation['evalDetailLine']
         resultNameWithFold = resultName+f'/fold-{i+1}/'
@@ -291,9 +300,6 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
             majorityVoting = appendTestToDictionary(majorityVoting, testingMetrics, endingEpoch,history,confusionMatrixDisp,rocCurveDisplay, model)
 
 
-
-
-
     if testInformation['votingSystem']== 'singleLargest':
         saveTestResults(singleLargestVoting, resultName+'/singleLargestVoting', testInformation, dataframes['singleLargest.xlsx'])
     else:
@@ -308,7 +314,9 @@ def generateKFoldsValidation(testInformation, dataset, dataframes, k=5):
             shutil.copy(filename, resultName+'/'+filename)
 
 
-# %%
+# In[ ]:
+
+
 def loadFromPickle(name):
     with open(f'{name}.pkl', 'rb') as fp:
         data = pkl.load(fp)
@@ -364,9 +372,8 @@ def getDataset(testInformation):
 
     ## LOAD THE DATA
     ## ==============================================================================================================
-    # name = f"preprocessCombinations/hasBackground={testInformation['hasBackground']}-usesLargestBox={testInformation['usesLargestBox']}-segmentsMultiple={testInformation['segmentsMultiple']}-size=(119,119)"
-    name = f"preprocessCombinations/hasBackground={True}-usesLargestBox={True}-segmentsMultiple={3}-size=(119,119)"
-
+    name = f"preprocessCombinations/hasBackground={testInformation['hasBackground']}-usesLargestBox={testInformation['usesLargestBox']}-segmentsMultiple={testInformation['segmentsMultiple']}-size=(119,119)"
+    
     dataset = loadFromPickle(name)
     consitencyCheck, instanceSize = checkShapesConsistent(dataset)
     print('Sizes are all the same? ', consitencyCheck)
@@ -376,7 +383,10 @@ def getDataset(testInformation):
     
     return dataset
 
-# %%
+
+# In[ ]:
+
+
 columns = ['TestName','RunData','PredictionSplits','Accuracy','F1','Recall','Precision','ROC-AUC','EndingEpoch','AccuracyData','F1Data','RecallData','PrecisionData','ROC-AUCData']
 #sheetName = 'KFolds'
 
@@ -415,7 +425,7 @@ def setGridSearchParams():
     # votingSystem = 'multiVoting' #average, singleLargest, majority, multiVoting
     sampleStrategy = 'normal' # 'underSampling', 'overSampling', 'normal' 
 
-    experimentName = f'testSamples11-11--normal'
+    experimentName = f'testSamples21-11--normal'
     training_data_transforms = None
     # training_data_transforms = transforms.Compose([
     #     transforms.RandomRotation(degrees=0.85),
@@ -472,5 +482,4 @@ def setGridSearchParams():
                             gridSearch(testInformation)
 
 setGridSearchParams()
-
 
