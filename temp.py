@@ -185,10 +185,10 @@ def underSampleData(dataset, trainFolders):
     indiciesOfOtherClass = []
     
     for patient in trainFolders:
-        print(dataset[patient]['label'])
-        if dataset[patient]['label'] == torch.tensor(1, dtype=torch.int64):
+        #print(dataset[patient]['label'])
+        if dataset[patient]['label'] == torch.tensor(1, dtype=torch.float32):
             indiciesToConsiderDropping.append(patient)
-            print('yes')
+            #print('yes')
         else:
             indiciesOfOtherClass.append(patient)
 
@@ -228,7 +228,7 @@ def oversampleData(dataset, trainFolders):
     indiciesOfOtherClass = []
     
     for patient in trainFolders:
-        if dataset[patient]['label'] == torch.tensor(0, dtype=torch.float32):
+        if dataset[patient]['label'] == torch.tensor(0, dtype=torch.int64):
             indiciesToRepeat.append(patient)
         else:
             indiciesOfOtherClass.append(patient)
@@ -305,7 +305,14 @@ class PatientData(Dataset):
             image = self.setData[self.patients[patient_idx]]['images'][slice_idx]
             label = self.setData[self.patients[patient_idx]]['label']
 
-        image = Image.fromarray((image * 255).astype(np.uint16))
+        # Convert to RGB
+        if self.segmentsMultiple==1:
+          image = (image * 255).astype(np.uint16)
+          image = image[0]
+          image = Image.fromarray(image)
+        else:
+          image = Image.fromarray((image * 255).astype(np.uint16))
+        
         image = image.convert("RGB")
         
         # Apply augmentations if there are any

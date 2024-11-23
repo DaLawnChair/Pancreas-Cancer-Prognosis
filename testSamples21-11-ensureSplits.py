@@ -11,7 +11,6 @@
 # CUDA_VISIBLE_DEVICES=0 python testSamples2-8.py -batchSize=16 -epochs=100 -lr=0.001 -evalDetailLine="majourity voting on smote with 2 clases" -hasBackground=f -usesLargestBox=f -segmentsMultiple=12 -dropoutRate=0.2 -grouped2D=t -modelChosen='Small2D' -votingSystem='majority'
 # CUDA_VISIBLE_DEVICES=1 python test14-8.py && CUDA_VISIBLE_DEVICES=1 python test14-8.py
 
-
 # CUDA_VISIBLE_DEVICES=2 python testSamples11-11.py
 
 
